@@ -2,20 +2,31 @@ import copy
 from collections import OrderedDict
 from collections import deque
 
+from math import floor
+
+from heapq import heappush
+from heapq import heappop
+
 from computeTree import Point, ComputeNode, ComputeTree
 from util import print_solution
 
-def heuristic():
-    pass
+
+def heuristic(point):
+    return floor( abs(point.x)/9)+ floor( abs(point.y)/9)
 
 def astar_find_solution(game_tree):
     # BFS
     best_cost = 9999 # represent infinite
     best_node = None
-    dq = deque()
-    dq.append(game_tree.root)
-    while dq.count != 0:
-        node = dq.popleft() # the leftmost one
+
+    # use heapq to make this list in heap
+    # each item is in type of a 2-tuple, which is (value, node)
+    priority_q = []
+    pair = ( heuristic(game_tree.root.point) + 0, game_tree.root )
+    heappush( priority_q, pair)
+
+    while len(priority_q) != 0:
+        _, node = heappop(priority_q)
 
         if node.point == game_tree.end_point:
             if node.path_cost < best_cost:
@@ -50,7 +61,8 @@ def astar_find_solution(game_tree):
             ob.ppath_type = ob_name
             node.appendchild(child_type=ob_name,exist_node=ob)
         for obj in ref_dict:
-            dq.append(obj)
+            pair = ( heuristic(obj.point)+node.path_cost, obj)
+            heappush( priority_q, pair)
     #end while
     
     if best_node != None:

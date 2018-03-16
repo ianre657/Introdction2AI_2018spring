@@ -17,6 +17,11 @@ class ComputeNode:
             'suby':None,
             'pass':None,
         }
+
+    # for sorting
+    def __lt__(self, other):
+        return self.point < other.point 
+        
     def appendchild(self,child_type,exist_node=None,point=None,path_cost=None):
         if exist_node != None:
             self.children[child_type] = exist_node
