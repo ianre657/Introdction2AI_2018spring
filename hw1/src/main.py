@@ -7,8 +7,10 @@ from bfs import bfs_find_solution
 from ids import ids_find_solution
 from astar import astar_find_solution
 
+input_file_name = './inputdata/IntroAI_PR1_test.txt' 
+
 def main():
-    with open('IntroAI_PR1_test.txt') as inputfile:
+    with open(input_file_name) as inputfile:
         for line in inputfile:
             line = str(line).strip()
             words = re.split('[ \n]+', line )
@@ -30,6 +32,7 @@ def main():
                 astar_find_solution(game_tree= gameTree)
             else:
                 raise('unknown method')
+            print('\n\n')
 
 if __name__ == '__main__':
     main()

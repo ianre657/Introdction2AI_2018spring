@@ -39,7 +39,8 @@ def exit_handler():
     astar_show_profile()
 
 def heuristic(point):
-    return floor( abs(point.x)/9)+ floor( abs(point.y)/9)
+    return 1
+    #return floor( abs(point.x)/9)+ floor( abs(point.y)/9)
 
 def astar_find_solution(game_tree):
     global astar_prof_max_queue_size
