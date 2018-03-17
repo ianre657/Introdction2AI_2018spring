@@ -5,15 +5,45 @@ from collections import deque
 from computeTree import Point, ComputeNode, ComputeTree
 from util import print_solution
 
+# profiling
+from time import time
+bfs_prof_start_time = 0
+bfs_prof_end_time = 0
+bfs_prof_execute_time = 0
+bfs_prof_node_explored = 0
+bfs_prof_depth_reached = 0
+bfs_prof_max_queue_size = 0
+
+def bfs_show_profile():
+    print('BFS profiling outcome'.center(40,'-'))
+    print(' execute time:   {:.4} sec'.format(bfs_prof_execute_time))
+    print(' node explored:  {}'.format(bfs_prof_node_explored))
+    print(' max tree depth: {}'.format(bfs_prof_depth_reached))
+    print(' max queue size: {}'.format(bfs_prof_max_queue_size))
+
 
 def bfs_find_solution(game_tree):
+    global bfs_prof_max_queue_size
+    global bfs_prof_start_time, bfs_prof_end_time,bfs_prof_execute_time
+    global bfs_prof_node_explored, bfs_prof_depth_reached
     # BFS
+    bfs_prof_start_time = time()
     best_cost = 999 # represent infinite
     best_node = None
     dq = deque()
     dq.append(game_tree.root)
-    while dq.count != 0:
+    while len(dq) != 0:
+        # profiling
+        if len(dq) > bfs_prof_max_queue_size:
+            bfs_prof_max_queue_size = len(dq)
+        # profilingend
+
         node = dq.popleft() # the leftmost one
+        # profiling
+        bfs_prof_node_explored += 1
+        if node.path_cost > bfs_prof_depth_reached:
+            bfs_prof_depth_reached = node.path_cost
+        # profiling end
 
         if node.point == game_tree.end_point:
             if node.path_cost < best_cost:
@@ -51,8 +81,11 @@ def bfs_find_solution(game_tree):
             dq.append(obj)
     #end while
     
+    bfs_prof_end_time = time()
+    bfs_prof_execute_time = bfs_prof_end_time - bfs_prof_start_time
     if best_node != None:
         print("find best solution!!")
         print_solution(best_node)
     else:
         print("no solution finded")
+    bfs_show_profile()
