@@ -10,12 +10,45 @@ from heapq import heappop
 from computeTree import Point, ComputeNode, ComputeTree
 from util import print_solution
 
+# profiling
+import atexit
+from time import time
+astar_prof_start_time = 0
+astar_prof_end_time = 0
+astar_prof_execute_time = 0
+astar_prof_node_explored = 0
+astar_prof_depth_reached = 0
+astar_prof_max_queue_size = 0
+
+def astar_show_profile():
+    print('astar profiling outcome'.center(40,'-'))
+    print(' execute time:   {:.4} sec'.format(astar_prof_execute_time))
+    print(' node explored:  {}'.format(astar_prof_node_explored))
+    print(' max tree depth: {}'.format(astar_prof_depth_reached))
+    print(' max queue size: {}'.format(astar_prof_max_queue_size))
+    atexit.unregister(exit_handler)
+
+
+def exit_handler():
+    global astar_prof_end_time, astar_prof_execute_time,astar_prof_start_time
+    print("program stopped")
+    # profiling
+    astar_prof_end_time = time()
+    astar_prof_execute_time = astar_prof_end_time - astar_prof_start_time
+    # profiling end
+    astar_show_profile()
 
 def heuristic(point):
     return floor( abs(point.x)/9)+ floor( abs(point.y)/9)
 
 def astar_find_solution(game_tree):
-    # BFS
+    global astar_prof_max_queue_size
+    global astar_prof_start_time, astar_prof_end_time,astar_prof_execute_time
+    global astar_prof_node_explored, astar_prof_depth_reached
+
+    atexit.register(exit_handler)
+    astar_prof_start_time = time()
+
     best_cost = 9999 # represent infinite
     best_node = None
 
@@ -26,7 +59,17 @@ def astar_find_solution(game_tree):
     heappush( priority_q, pair)
 
     while len(priority_q) != 0:
+        # profiling
+        if len(priority_q) > astar_prof_max_queue_size:
+            astar_prof_max_queue_size = len(priority_q)
+        # profilingend
+
         _, node = heappop(priority_q)
+        # profiling
+        astar_prof_node_explored += 1
+        if node.path_cost > astar_prof_depth_reached:
+            astar_prof_depth_reached = node.path_cost
+        # profiling end
 
         if node.point == game_tree.end_point:
             if node.path_cost < best_cost:
@@ -64,9 +107,15 @@ def astar_find_solution(game_tree):
             pair = ( heuristic(obj.point)+node.path_cost, obj)
             heappush( priority_q, pair)
     #end while
+
+    # profiling
+    astar_prof_end_time = time()
+    astar_prof_execute_time = astar_prof_end_time - astar_prof_start_time
+    # profiling end
     
     if best_node != None:
         print("find best solution!!")
         print_solution(best_node)
     else:
         print("no solution finded")
+    astar_show_profile()

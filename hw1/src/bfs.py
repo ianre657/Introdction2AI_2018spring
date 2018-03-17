@@ -6,6 +6,7 @@ from computeTree import Point, ComputeNode, ComputeTree
 from util import print_solution
 
 # profiling
+import atexit
 from time import time
 bfs_prof_start_time = 0
 bfs_prof_end_time = 0
@@ -20,12 +21,25 @@ def bfs_show_profile():
     print(' node explored:  {}'.format(bfs_prof_node_explored))
     print(' max tree depth: {}'.format(bfs_prof_depth_reached))
     print(' max queue size: {}'.format(bfs_prof_max_queue_size))
+    atexit.unregister(exit_handler)
+
+
+def exit_handler():
+    global bfs_prof_end_time, bfs_prof_execute_time,bfs_prof_start_time
+    print("program stopped")
+    # profiling
+    bfs_prof_end_time = time()
+    bfs_prof_execute_time = bfs_prof_end_time - bfs_prof_start_time
+    # profiling end
+    bfs_show_profile()
+
 
 
 def bfs_find_solution(game_tree):
     global bfs_prof_max_queue_size
     global bfs_prof_start_time, bfs_prof_end_time,bfs_prof_execute_time
     global bfs_prof_node_explored, bfs_prof_depth_reached
+    atexit.register(exit_handler)
     # BFS
     bfs_prof_start_time = time()
     best_cost = 999 # represent infinite
@@ -81,8 +95,11 @@ def bfs_find_solution(game_tree):
             dq.append(obj)
     #end while
     
+    # profiling
     bfs_prof_end_time = time()
     bfs_prof_execute_time = bfs_prof_end_time - bfs_prof_start_time
+    # profiling end
+
     if best_node != None:
         print("find best solution!!")
         print_solution(best_node)
