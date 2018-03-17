@@ -1,4 +1,5 @@
 # Introduction to AI - NCTUSpr2018 Programming Assignment1
+
 + Due 4/2/2018
 + The  objective  of  thisassignment  is  for  you  to  practice  with  the  classical  search  algorithms,  both uninformed and informed ones.
 
@@ -19,7 +20,8 @@ The given sequence of integers is
 `5 3 9 7 4 2 1 3 5 6 2 8 1 3 7 7 4 4 2 98 6 1 7 2 5 5 4`
 
 A possible solution (not necessarily optimal), with the position after each operation, is given below:
-```
+
+``` text
 init  ( 0, 0)
 (x+) 5( 5, 0)
 (y+) 3( 5, 3)
@@ -54,6 +56,7 @@ where `(dx,dy)`is the vector from the location at node nto the goal, and floor(v
 We have talked in the  class about how to design  heuristic functions by  relaxing some constraints on the problem.  This  topic is  also  mentioned  in  the  textbook.  In  you  report,  try  to  answer  the  question:  What constraint is relaxed to obtain the heuristic function given above?
 
 ## Extra credit: 
+
 You  can try to devise  your own heuristic function that is better than this one, and  compare the performance
 
 ## Limit of programming language
@@ -61,9 +64,13 @@ You  can try to devise  your own heuristic function that is better than this one
 You  can  use  C/C++,Java,  Python,  or  MATLABto  write  your  program.In  general,  the  TAs  will  not actually compile or run your programs. The code listing is used to understand your thoughts during your implementation,  and  to  find  problems  if  your  results  look  strange.  Therefore,  the  code  listing  should  be well-organized  and  contain  comments  that  help  the  readers  understand  your  code;  this  will  also  affect your grade.
 
 ## Additional hints
+
 Some notes about implementations if you are using C++ with STL:
+
 + For BFS, std::dequetemplate is the convenient choice for the frontier.
+
 + For DLS, you can use either recursion or a stack.Either way,anode needs to remember its depth.
+
 + For priority queue, you have some convenientchoices:
-    + std::priority_queuetemplate: You need to supply a function for ordering two nodes. 
-    + std::multimaptemplate: You can use your "priority" as the key.
+  + std::priority_queuetemplate: You need to supply a function for ordering two nodes. 
+  + std::multimaptemplate: You can use your "priority" as the key.
