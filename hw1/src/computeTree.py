@@ -1,4 +1,6 @@
 from collections import namedtuple
+import copy
+from collections import OrderedDict
 
 Point = namedtuple('Point',['x','y'])
 
@@ -18,18 +20,19 @@ class ComputeNode:
 
     def __init__(self, parent, point,path_cost, cur_num,remain_num):
         self.parent = parent
-        self.ppath_type = None # The type of the path from parent to child
-        self.cur_num = cur_num # A signle number
-        self.remain_num = remain_num # number remained in computation tree (tuple) 
+        self.ppath_type = None
+        self.cur_num = cur_num
+        self.remain_num = remain_num
         self.path_cost = path_cost
         self.point = point
-        self.children = {# ComputeNodes
-            'addx':None,
-            'subx':None,
-            'addy':None,
-            'suby':None,
-            'pass':None,
-        }
+        self.children = OrderedDict([
+            # ComputeNodes
+            ('addx',None),
+            ('subx',None),
+            ('addy',None),
+            ('suby',None),
+            ('pass',None),
+        ])
 
     def __lt__(self, other):
         return self.point < other.point 
@@ -48,6 +51,35 @@ class ComputeNode:
                 cur_num = self.remain_num[0],
                 remain_num=self.remain_num[1:]
                 )
+    def appendchildren(self):
+        '''Add five children to a single node
+        '''
+        node = self
+        # add five children
+        child_pcost = node.path_cost+1
+        child_num = node.remain_num[0]
+        child_re_num = node.remain_num[1:]
+        example_node = ComputeNode( 
+            parent=node,
+            point=Point(0,0),
+            path_cost= child_pcost,
+            cur_num=child_num,
+            remain_num=child_re_num
+            )
+        # Allocate five childeren
+        (cur_x, cur_y) = node.point
+        add_x, add_y, sub_x, sub_y, ps = ( copy.copy(example_node) for _ in range(5))
+        add_x.point= Point(cur_x+child_num, cur_y)
+        add_y.point= Point(cur_x, cur_y+child_num)
+        sub_x.point= Point(cur_x-child_num, cur_y)
+        sub_y.point= Point(cur_x, cur_y-child_num)
+        ps.point= Point(cur_x, cur_y)
+        ref_dict = OrderedDict( [(add_x,'addx'),(add_y,'addy'),(sub_x,'subx'),(sub_y,'suby'),(ps,'pass')])
+        for ob in ref_dict.keys():
+            ob_name = ref_dict[ob]
+            ob.ppath_type = ob_name
+            node.appendchild(child_type=ob_name,exist_node=ob)
+
 
 class ComputeTree:
     ''' Search Tree for computation

@@ -68,31 +68,11 @@ def bfs_find_solution(game_tree):
             continue
 
         # add five children
-        child_pcost = node.path_cost+1
-        child_num = node.remain_num[0]
-        child_re_num = node.remain_num[1:]
-        example_node = ComputeNode( 
-            parent=node,
-            point=Point(0,0),
-            path_cost= child_pcost,
-            cur_num=child_num,
-            remain_num=child_re_num
-            )
-        # Allocate five childeren
-        (cur_x, cur_y) = node.point
-        add_x, add_y, sub_x, sub_y, ps = ( copy.copy(example_node) for _ in range(5))
-        add_x.point= Point(cur_x+child_num, cur_y)
-        add_y.point= Point(cur_x, cur_y+child_num)
-        sub_x.point= Point(cur_x-child_num, cur_y)
-        sub_y.point= Point(cur_x, cur_y-child_num)
-        ps.point= Point(cur_x, cur_y)
-        ref_dict = OrderedDict( [(add_x,'addx'),(add_y,'addy'),(sub_x,'subx'),(sub_y,'suby'),(ps,'pass')])
-        for ob in ref_dict.keys():
-            ob_name = ref_dict[ob]
-            ob.ppath_type = ob_name
-            node.appendchild(child_type=ob_name,exist_node=ob)
-        for obj in ref_dict:
-            dq.append(obj)
+        node.appendchildren()
+        for ch_name in node.children.keys():
+            child = node.children.get(ch_name, None)
+            if child != None:
+                dq.append(child)
     #end while
     
     # profiling
