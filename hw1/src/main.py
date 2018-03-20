@@ -13,6 +13,11 @@ def main():
     with open(input_file_name) as inputfile:
         for line in inputfile:
             line = str(line).strip()
+
+            # skip blank line and #(commented) line
+            if line.startswith('#') or len(line)==0:
+                continue
+
             words = re.split('[ \n]+', line )
             
             method = words[0]
