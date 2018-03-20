@@ -24,4 +24,13 @@ Common data structures for tree searching, which is specilly designed for this p
 
 In `util.py`,common functions were defined based on the data structure in `compteTree.py`, such as showing the solution using backtracking from the leaf node.
 
-## Profiling outcomes
+## Expected outcome
+
+All of the search tree have branching factor B = 5. So the complexity of searching tree might be O(5^n). We expect a O(5^n) time complexity on searching. However, different from BFS & IDS ,the actual performance of A* search depends on the heuristic funciton h(n) it used.
+
+
+## Outcomes
+All of these searching are 
+
+!(./pic/cmp_log_eng.png)
+!(./pic/cmp_eng.png)
