@@ -2,7 +2,7 @@
 
     Introdunction to AI @ NCTU, Spring 2018
     0411276 陳奕安
-    Environment : OSX 10.13.3, using python 3.6.4
+    Environment : OSX 10.13.3, using cpython 3.6.4
 
 ## Program structure
 
@@ -32,7 +32,7 @@ However, different from BFS & IDS ,the actual performance of A* search depends o
 ## Outcomes
 
 Given the inputs that vary on the steps of the optimal solution,
-it's shown that BFS/IDS have the similar performance. IDS have explored slighlty more nodes than BFS in order to find a solution, but in exchange, the low demand on memory usage, which can't be shown by this chart, is the reason that make IDS a more pratical algorithm while the size of the searching tree grows.
+it's shown that BFS/IDS have the similar performance. IDS have explored slighlty more nodes than BFS in order to find a solution, but in exchange, the low demand on memory usage, which can't be shown by this chart, is the reason that make IDS a more pratical algorithm while the size of the searching tree grows. On my testing environment, when the optimal solution of the input data is equal to 9 steps, BFS require 834~885 MB of memory during computation. On the other side, only 2MB of memory is used by IDS.
 
 ![pic1-1: Node explored under different searching method](./pic/cmp_eng.png)
 
@@ -41,4 +41,4 @@ order of growth between A* and BFS/IDS is different, in a input size that is sti
 
 ![pic1-2: pic1-1 in a logarithmic scale](./pic/cmp_log_eng.png)
 
-When it comes to pratical usage. For the sake of efficiency, it's better to apply IDS when the solution doesn't contains no more than 6 steps and use A* instead when it does. The question is that how can we know the steps that a solution would take before actually build a search tree on it? I suggest that use the heuristic function in A* search to estimate the step of a solution.
+When it comes to pratical usage. For the sake of efficiency, it's better to apply IDS when the solution doesn't contains no more than 6 steps and use A* instead when it does. The question is that how can we know the steps that a solution would take before actually build a search tree on it? I suggest that __using the heuristic function in A* search to estimate the steps of a optimal solution__.

@@ -35,6 +35,18 @@ def main():
                 ids_find_solution(game_tree= gameTree)
             elif method == 'A*':
                 astar_find_solution(game_tree= gameTree)
+            elif method == 'improved':
+                continue
+                print('imporved method'.center(40,'='))
+                from astar import heuristic
+                cur_point = Point(0,0)
+                est_step = heuristic(point=cur_point, endpoint=end_point)
+                print("estimated step:{}".format(est_step))
+                if est_step <= 5:
+                    ids_find_solution(game_tree= gameTree)
+                else:
+                    astar_find_solution(game_tree= gameTree)
+                print('imporved method'.center(40,'^'))
             else:
                 raise('unknown method')
             print('\n\n')
