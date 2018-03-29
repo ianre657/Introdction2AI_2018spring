@@ -1,5 +1,25 @@
 from collections import deque
 from computeTree import Point, ComputeNode, ComputeTree
+from computeTree import solution_path, solNode
+present_dict = {
+    'addx':'(x+)',
+    'addy':'(y+)',
+    'subx':'(x-)',
+    'suby':'(y-)',
+    'pass':'(S)',
+}
+
+def print_solution_path( sol_path):
+    node = sol_path[0]
+    print('initial\t({:>2},{:>2})'.format(node.point.x, node.point.y))
+    for n in sol_path[1:]:
+        point_str = '({:>2},{:>2})'.format(n.point.x, n.point.y)
+        print( '{} {}\t{}'.format(present_dict[n.ppath_type], n.number, point_str),end='')
+        if n == sol_path[-1]:
+            print(' final')
+        else:
+            print()
+
 
 def print_solution( ans_leaf ):
     '''print the answer from the leave node
@@ -14,13 +34,6 @@ def print_solution( ans_leaf ):
     if ans_leaf == None:
         return None
 
-    present_dict = {
-        'addx':'(x+)',
-        'addy':'(y+)',
-        'subx':'(x-)',
-        'suby':'(y-)',
-        'pass':'(S)',
-    }
     solution = deque()
     cur_node = ans_leaf
     while cur_node != None :

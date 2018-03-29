@@ -2,6 +2,7 @@
 import re
 
 from computeTree import Point, ComputeNode, ComputeTree
+from util import print_solution_path
 
 from bfs import bfs_find_solution
 from ids import ids_find_solution
@@ -25,16 +26,22 @@ def main():
             end_point = Point(x,y)
             numbers = tuple( int(i) for i in words[3:] ) #in
 
-            print( 'method :"{}", end_point:{}'.format(method,end_point))
-            print( '    numbers : {}'.format(str(numbers)))
+            #print( 'method :"{}", end_point:{}'.format(method,end_point))
+            #print( '    numbers : {}'.format(str(numbers)))
     
             gameTree = ComputeTree(numbers=numbers,end_point=end_point)
             if method == 'BFS':
-                bfs_find_solution(game_tree= gameTree)
+                sol = bfs_find_solution(game_tree= gameTree, show_profiling=True)
+                print_solution_path( sol)
+                
             elif method == 'IDS':
-                ids_find_solution(game_tree= gameTree)
+                sol = ids_find_solution(game_tree= gameTree, show_profiling=True)
+                print_solution_path( sol)
+                #exit(0)
             elif method == 'A*':
-                astar_find_solution(game_tree= gameTree)
+                sol = astar_find_solution(game_tree= gameTree, show_profiling=True)
+                print_solution_path( sol)
+ 
             elif method == 'improved':
                 continue
                 print('imporved method'.center(40,'='))

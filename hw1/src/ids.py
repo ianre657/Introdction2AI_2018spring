@@ -2,7 +2,9 @@ import copy
 from collections import OrderedDict
 from collections import deque
 
+
 from computeTree import Point, ComputeNode, ComputeTree
+from computeTree import solNode, solution_path
 from util import print_solution
 
 # profiling
@@ -68,13 +70,16 @@ def recursive_find(node, end_point, max_depth):
 
     return None
 
-def ids_find_solution(game_tree):
+def ids_find_solution(game_tree,  show_profiling=False):
     ''' Iteractive Deeping Search
     use DFS with limited depth , which would be incremented iteractiveily.
     '''
     global ids_prof_start_time, ids_prof_end_time
     global ids_prof_execute_time
-    atexit.register(exit_handler)
+
+    if show_profiling == True:
+        atexit.register(exit_handler)
+    
     ids_prof_start_time = time()
     best_cost = 0
     best_node = None
@@ -97,8 +102,16 @@ def ids_find_solution(game_tree):
             ids_prof_end_time = time()
             ids_prof_execute_time = ids_prof_end_time - ids_prof_start_time
             # profiling end
-            print_solution(best_node)
-            ids_show_profile()
-            return
+            
+            #print_solution(best_node)
+
+            if show_profiling == True:
+                ids_show_profile()
+            return solution_path(best_node)
                 
         max_depth += 1 
+    if best_node == None:
+        if show_profiling == True:
+            ids_show_profile()
+        return None
+

@@ -7,7 +7,10 @@ from math import floor
 from heapq import heappush
 from heapq import heappop
 
+
 from computeTree import Point, ComputeNode, ComputeTree
+from computeTree import solNode, solution_path
+
 from util import print_solution
 
 # profiling
@@ -44,12 +47,13 @@ def heuristic(point, endpoint):
     #return 1
     return floor( abs(px-ex)/9)+ floor( abs(py-ey)/9)
 
-def astar_find_solution(game_tree):
+def astar_find_solution(game_tree, show_profiling=False):
     global astar_prof_max_queue_size
     global astar_prof_start_time, astar_prof_end_time,astar_prof_execute_time
     global astar_prof_node_explored, astar_prof_depth_reached
 
-    atexit.register(exit_handler)
+    if show_profiling == True:
+        atexit.register(exit_handler)
     astar_prof_start_time = time()
 
     best_cost = 9999 # represent infinite
@@ -94,9 +98,11 @@ def astar_find_solution(game_tree):
     astar_prof_execute_time = astar_prof_end_time - astar_prof_start_time
     # profiling end
     
+    if show_profiling == True:
+        astar_show_profile()
+
     if best_node != None:
-        print("find best solution!!")
-        print_solution(best_node)
+        return solution_path(best_node)
+        #print_solution(best_node)
     else:
-        print("no solution finded")
-    astar_show_profile()
+        return None

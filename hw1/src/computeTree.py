@@ -1,8 +1,10 @@
-from collections import namedtuple
 import copy
+from collections import deque
+from collections import namedtuple
 from collections import OrderedDict
 
 Point = namedtuple('Point',['x','y'])
+solNode = namedtuple('solNode', ['number','point','ppath_type'])
 
 class ComputeNode:
     """ The node for computeTree
@@ -80,7 +82,6 @@ class ComputeNode:
             ob.ppath_type = ob_name
             node.appendchild(child_type=ob_name,exist_node=ob)
 
-
 class ComputeTree:
     ''' Search Tree for computation
         Attributes:
@@ -96,3 +97,44 @@ class ComputeTree:
             remain_num=numbers
             )
         self.end_point = end_point 
+
+class solution_path:
+    '''Contain the information of the solution
+    '''
+
+    def __init__(self, ans_leaf):
+        ''' generate the solution from leave node
+        self.list: contain all of the nodes(include the starting point)
+        self.steps: count the steps of the solution ( len(self.list)-1 ) 
+        '''
+        self.list = []
+
+        solution = deque()
+        cur_node = ans_leaf
+        while cur_node != None :
+            solution.append(cur_node)
+            cur_node = cur_node.parent
+
+        # get solution
+        while len(solution) != 0:
+            cur_node = solution.pop()
+            self.list.append(
+                solNode(
+                    cur_node.cur_num,
+                    cur_node.point,
+                    cur_node.ppath_type
+                )
+            )
+        self.steps = len(self.list)-1
+            
+
+    def __len__(self):
+        return len(self.list)
+
+    def __getitem__(self, key):
+        return self.list[key]
+    def __str__(self):
+        rep = []
+        for i in self.list:
+            rep.append('num={},porint={},ppath={}'.format(i.number,i.point,i.ppath_type))
+        return '\n'.join(rep)

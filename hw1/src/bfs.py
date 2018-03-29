@@ -2,7 +2,10 @@ import copy
 from collections import OrderedDict
 from collections import deque
 
+
 from computeTree import Point, ComputeNode, ComputeTree
+from computeTree import solution_path, solNode
+
 from util import print_solution
 
 # profiling
@@ -34,12 +37,13 @@ def exit_handler():
     bfs_show_profile()
 
 
-
-def bfs_find_solution(game_tree):
+def bfs_find_solution(game_tree, show_profiling=False):
     global bfs_prof_max_queue_size
     global bfs_prof_start_time, bfs_prof_end_time,bfs_prof_execute_time
     global bfs_prof_node_explored, bfs_prof_depth_reached
-    atexit.register(exit_handler)
+
+    if show_profiling == True:
+        atexit.register(exit_handler)
     # BFS
     bfs_prof_start_time = time()
     best_cost = 999 # represent infinite
@@ -80,9 +84,11 @@ def bfs_find_solution(game_tree):
     bfs_prof_execute_time = bfs_prof_end_time - bfs_prof_start_time
     # profiling end
 
+
+    if show_profiling == True:
+        bfs_show_profile()
+    
     if best_node != None:
-        print("find best solution!!")
-        print_solution(best_node)
+        return solution_path(best_node)
     else:
-        print("no solution finded")
-    bfs_show_profile()
+        return None
