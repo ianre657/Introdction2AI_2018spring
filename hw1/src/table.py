@@ -3,6 +3,9 @@ from bfs import bfs_find_solution
 import itertools
 import pickle
 import sys
+import time
+
+global calc_start_time
 
 def find_path( end_point, numbers):
   gameTree = ComputeTree( numbers= numbers, end_point=end_point)
@@ -32,12 +35,18 @@ class pt_solution_table:
         if sol and sol.steps==length:
           st.update( (tuple(nm_arr),) )
     
-    #for ln, st in enumerate(self.sets, start=1):
-    #  print(" point:{}".format(self.point) )
-    #  print(" number of solutions :{}".format(len(st)) )
-    #  print(  "solution for {}".format(ln).center(30,'-') )
-    #  print(st)
-    #  print("")
+    for ln, st in enumerate(self.sets, start=1):
+      print(" point:{}".format(self.point) )
+      print(" steps:{}".format(ln))
+      print(" number of solutions :{}".format(len(st)) )
+      #print(  "solution for {}".format(ln).center(30,'-') )
+      #print(st)
+      print("")
+    
+    global calc_start_time
+    cur_time= time.time()
+    print("time elasped:{:.2f}".format(cur_time-calc_start_time))
+
 
 class table:
   def __init__(self, max_sz=2, max_len=3):
@@ -86,6 +95,8 @@ def store_table( max_size =8, max_steps=4):
 def main():
   if len(sys.argv)>=2 and sys.argv[1] == 'store':
     print("start to compute")
+    global calc_start_time
+    calc_start_time=time.time()
     store_table()
     return
   
