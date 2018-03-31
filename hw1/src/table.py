@@ -22,7 +22,7 @@ class pt_solution_table:
     point (Point)
     sets  (List of sets)
   '''
-  def __init__ (self,end_point,max_len=3):
+  def __init__ (self,end_point,lock,max_len=3):
     self.point = end_point
     self.sets = [ set() for i in range(max_len)]
 
@@ -36,13 +36,14 @@ class pt_solution_table:
         if sol and sol.steps==length:
           st.update( (tuple(nm_arr),) )
     
-    for ln, st in enumerate(self.sets, start=1):
-      print(" point:{}".format(self.point) )
-      print(" steps:{}".format(ln))
-      print(" number of solutions :{}".format(len(st)) )
-      #print(  "solution for {}".format(ln).center(30,'-') )
-      #print(st)
-      print("")
+    with lock:
+        for ln, st in enumerate(self.sets, start=1):
+          print(" point:{}".format(self.point) )
+          print(" steps:{}".format(ln))
+          print(" number of solutions :{}".format(len(st)) )
+          #print(  "solution for {}".format(ln).center(30,'-') )
+          #print(st)
+          print("")
     
     global calc_start_time
     cur_time= time.time()
@@ -81,12 +82,13 @@ class table:
     for ps in ps_list:
       ps.join()
 
+    self.update_lock = None
+
   def compute_points(self, points):
     for point in points:
-      cur_table = pt_solution_table(end_point=point ,max_len=self.max_len)
-      self.udpate_lock.acquire()
-      self.points[ point ] = cur_table
-      self.udpate_lock.release()
+      cur_table = pt_solution_table(end_point=point,lock=self.udpate_lock,max_len=self.max_len)
+      with self.update_lock:
+        self.points[ point ] = cur_table
       
 
   def find_distance( self, point, numbers):
@@ -109,7 +111,7 @@ def load_table( max_size=18, max_steps= 3):
   print("distance={}".format(dis))
   return
 
-def store_table( max_size =7, max_steps=4, num_thread=4):
+def store_table( max_size =5, max_steps=3, num_thread=8):
   ''' Generate the compute table
   '''
   table_name = './table/table_sz{}_stp{}.pickle'.format(max_size, max_steps)
