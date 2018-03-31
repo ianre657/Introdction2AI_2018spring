@@ -84,6 +84,7 @@ class table:
     self.update_lock = None
 
   def compute_points(self, points, update_lock):
+    print('pt: {}, lock{}'.format(points, update_lock))
     for point in points:
       cur_table = pt_solution_table(end_point=point,lock=update_lock,max_len=self.max_len)
       with update_lock:
@@ -110,7 +111,7 @@ def load_table( max_size=18, max_steps= 3):
   print("distance={}".format(dis))
   return
 
-def store_table( max_size =5, max_steps=3, num_thread=8):
+def store_table( max_size =3, max_steps=3, num_thread=8):
   ''' Generate the compute table
   '''
   table_name = './table/table_sz{}_stp{}.pickle'.format(max_size, max_steps)
@@ -124,14 +125,18 @@ def main():
     print("start to compute")
     global calc_start_time
     calc_start_time=time.time()
-    store_table(max_size=3, max_steps=3, num_thread=8)
+    store_table(max_size=18, max_steps=4, num_thread=8)
     return
   
-  t = load_table()
-  dis = t.find_distance( (-2,-5),[4,2,1] )
+  calc_start_time=time.time()
+  store_table(max_size=3, max_steps=3, num_thread=8)
+  t = load_table(max_size=3, max_steps=3)
+  #print(t.points[tuple((1,2))].sets(2))
+  print("points")
+  for pt in  t.points.keys():
+    print(pt)
+  dis = t.find_distance( (-2,-1),[6,2,1] )
   print("distance={}".format(dis))
 
 
 
-if __name__ == '__main__':
-  main()
