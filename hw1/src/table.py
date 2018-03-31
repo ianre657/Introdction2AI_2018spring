@@ -51,7 +51,7 @@ class pt_solution_table:
 
 
 class table:
-  def __init__(self, max_sz=2, max_len=3, num_thread=4):
+  def __init__(self, update_lock,max_sz=2, max_len=3, num_thread=4):
     '''
     max_len : maximum step to generate
     max_sz : the gride point to generate answer
@@ -59,11 +59,10 @@ class table:
     # keys are Points
     self.points = dict()
     self.max_len = max_len
-    self.udpate_lock = mp.Lock()
 
-    self.generate_table(max_sz=max_sz, num_thread=num_thread)
+    self.generate_table(update_lock= update_lock,max_sz=max_sz, num_thread=num_thread)
 
-  def generate_table(self, max_sz, num_thread):
+  def generate_table(self, update_lock, max_sz, num_thread):
     def split(a, n):
       k, m = divmod(len(a), n)
       return (a[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(n))
@@ -76,7 +75,7 @@ class table:
 
     ps_list =[]
     for pg in point_groups:
-      ps = mp.Process(target=self.compute_points,args=(pg,))
+      ps = mp.Process(target=self.compute_points,args=(pg,update_lock))
       ps_list.append(ps)
       ps.start()
     for ps in ps_list:
@@ -84,10 +83,10 @@ class table:
 
     self.update_lock = None
 
-  def compute_points(self, points):
+  def compute_points(self, points, update_lock):
     for point in points:
-      cur_table = pt_solution_table(end_point=point,lock=self.udpate_lock,max_len=self.max_len)
-      with self.update_lock:
+      cur_table = pt_solution_table(end_point=point,lock=update_lock,max_len=self.max_len)
+      with update_lock:
         self.points[ point ] = cur_table
       
 
@@ -115,7 +114,8 @@ def store_table( max_size =5, max_steps=3, num_thread=8):
   ''' Generate the compute table
   '''
   table_name = './table/table_sz{}_stp{}.pickle'.format(max_size, max_steps)
-  t = table( max_sz=max_size,max_len=max_steps,num_thread=num_thread)
+  update_lock = mp.Lock()
+  t = table( update_lock=update_lock,max_sz=max_size,max_len=max_steps,num_thread=num_thread)
   with open(table_name,'wb') as handle:
     pickle.dump(t,handle,protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -124,7 +124,7 @@ def main():
     print("start to compute")
     global calc_start_time
     calc_start_time=time.time()
-    store_table()
+    store_table(max_size=3, max_steps=3, num_thread=8)
     return
   
   t = load_table()
