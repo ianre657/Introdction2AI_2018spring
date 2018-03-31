@@ -6,6 +6,7 @@ import sys
 import time
 
 global calc_start_time
+import multiprocessing as mp
 
 def find_path( end_point, numbers):
   gameTree = ComputeTree( numbers= numbers, end_point=end_point)
@@ -49,21 +50,45 @@ class pt_solution_table:
 
 
 class table:
-  def __init__(self, max_sz=2, max_len=3):
+  def __init__(self, max_sz=2, max_len=3, num_thread=4):
     '''
     max_len : maximum step to generate
     max_sz : the gride point to generate answer
     '''
     # keys are Points
     self.points = dict()
+    self.max_len = max_len
+    self.udpate_lock = mp.Lock()
+
+    self.generate_table(max_sz=max_sz, num_thread=num_thread)
+
+  def generate_table(self, max_sz, num_thread):
+    def split(a, n):
+      k, m = divmod(len(a), n)
+      return (a[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(n))
+
+    rng = range( max_sz+1)
 
     # only generate grid points in the first quadrant
-    rng = range( max_sz+1)
-    for x,y in itertools.product( rng, rng ):
-      pt = (x,y)
-      self.points[ pt ] = pt_solution_table(end_point=pt ,max_len=max_len)
-    #for k in self.points.keys():
-    # print(k)
+    grid_points = [(x,y) for x,y in itertools.product( rng, rng ) ]
+    point_groups = list(split( grid_points, num_thread))
+
+    ps_list =[]
+    for pg in point_groups:
+      ps = mp.Process(target=self.compute_points,args=(pg,))
+      ps_list.append(ps)
+      ps.start()
+    for ps in ps_list:
+      ps.join()
+
+  def compute_points(self, points):
+    for point in points:
+      cur_table = pt_solution_table(end_point=point ,max_len=self.max_len)
+      self.udpate_lock.acquire()
+      self.points[ point ] = cur_table
+      self.udpate_lock.release()
+      
+
   def find_distance( self, point, numbers):
     x,y = point
     find_pt =  Point( abs(x), abs(y))

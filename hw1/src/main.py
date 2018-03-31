@@ -17,7 +17,7 @@ from table import table
 from table import pt_solution_table
 from table import load_table
 
-t = load_table(max_size=8, max_steps=3)
+t = load_table(max_size=8, max_steps=4)
 
 def improved_heuristic(point, endpoint, numbers):
     global table
