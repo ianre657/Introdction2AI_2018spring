@@ -47,14 +47,18 @@ class table:
     '''
     # keys are Points
     self.points = dict()
-    rng = range( max_sz*-1 ,max_sz,1)
+
+    # only generate grid points in the first quadrant
+    rng = range( max_sz+1)
     for x,y in itertools.product( rng, rng ):
       pt = (x,y)
       self.points[ pt ] = pt_solution_table(end_point=pt ,max_len=max_len)
     #for k in self.points.keys():
     # print(k)
   def find_distance( self, point, numbers):
-    pt_sol_table = self.points.get(point,None)
+    x,y = point
+    find_pt =  Point( abs(x), abs(y))
+    pt_sol_table = self.points.get(find_pt,None)
     if pt_sol_table is None:
       return None 
     for length,sol_set in enumerate( pt_sol_table.sets, start=1 ):
@@ -62,32 +66,32 @@ class table:
         return length
     return None  
 
-def load_f():
-  store_file = './table/data.pickle'
-  t = None
-  with open(store_file,'rb') as handle:
+def load_table( max_size=18, max_steps= 3):
+  table_name = './table/table_sz{}_stp{}.pickle'.format(max_size, max_steps)
+  with open(table_name,'rb') as handle:
     t = pickle.load(handle)
-  dis = t.find_distance( (5,2),[4,2,1] )
+    return t
+  dis = t.find_distance( (-2,-5),[4,2,1] )
   print("distance={}".format(dis))
   return
 
-def store_f():
-  t = table( max_sz=8,max_len=3)
-  dis = t.find_distance( (4,2),[4,2,1] )
-  #dis = t.find_distance( (1,1),[1,8,9] )
-  print("distance={}".format(dis))
-  with open('./table/data.pickle','wb') as handle:
+def store_table( max_size =8, max_steps=4):
+  ''' Generate the compute table
+  '''
+  table_name = './table/table_sz{}_stp{}.pickle'.format(max_size, max_steps)
+  t = table( max_sz=max_size,max_len=max_steps)
+  with open(table_name,'wb') as handle:
     pickle.dump(t,handle,protocol=pickle.HIGHEST_PROTOCOL)
-  return
 
 def main():
-  if sys.argv[1] == 'load':
-    load_f()
-  elif sys.argv[1] == 'store':
+  if len(sys.argv)>=2 and sys.argv[1] == 'store':
     print("start to compute")
-    store_f()
-  else:
-    print("no method specified")
+    store_table()
+    return
+  
+  t = load_table()
+  dis = t.find_distance( (-2,-5),[4,2,1] )
+  print("distance={}".format(dis))
 
 
 

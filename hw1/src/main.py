@@ -10,6 +10,28 @@ from astar import astar_find_solution
 
 input_file_name = './inputdata/IntroAI_PR1_test.txt' 
 
+
+from math import floor
+from astar import default_heuristic
+from table import table
+from table import pt_solution_table
+from table import load_table
+
+t = load_table(max_size=8, max_steps=3)
+
+def improved_heuristic(point, endpoint, numbers):
+    global table
+
+    px,py = point
+    ex,ey = endpoint
+    vec = (ex-px, ey-py)
+    dist = t.find_distance( vec, numbers) 
+    if dist != None:
+        return dist
+    else:
+        return floor( abs(vec[0])/9)+ floor(abs(vec[1])/9)
+
+
 def main():
     with open(input_file_name) as inputfile:
         for line in inputfile:
@@ -43,17 +65,13 @@ def main():
                 print_solution_path( sol)
  
             elif method == 'improved':
-                continue
                 print('imporved method'.center(40,'='))
-                from astar import heuristic
                 cur_point = Point(0,0)
-                est_step = heuristic(point=cur_point, endpoint=end_point)
+                print('numbers:{}'.format(numbers))
+                est_step = improved_heuristic(point=cur_point, endpoint=end_point,numbers=numbers)
                 print("estimated step:{}".format(est_step))
-                if est_step <= 5:
-                    ids_find_solution(game_tree= gameTree)
-                else:
-                    astar_find_solution(game_tree= gameTree)
-                print('imporved method'.center(40,'^'))
+                sol = astar_find_solution(game_tree=gameTree, show_profiling=True,heuristic=improved_heuristic)
+                print_solution_path( sol)
             else:
                 raise('unknown method')
             print('\n\n')

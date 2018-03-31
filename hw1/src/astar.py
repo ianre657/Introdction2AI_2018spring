@@ -41,13 +41,13 @@ def exit_handler():
     # profiling end
     astar_show_profile()
 
-def heuristic(point, endpoint):
+def default_heuristic(point, endpoint):
     (px,py) = point
     (ex,ey) = endpoint
     #return 1
     return floor( abs(px-ex)/9)+ floor( abs(py-ey)/9)
 
-def astar_find_solution(game_tree, show_profiling=False):
+def astar_find_solution(game_tree, heuristic=default_heuristic, show_profiling=False ):
     global astar_prof_max_queue_size
     global astar_prof_start_time, astar_prof_end_time,astar_prof_execute_time
     global astar_prof_node_explored, astar_prof_depth_reached
@@ -62,7 +62,13 @@ def astar_find_solution(game_tree, show_profiling=False):
     # use heapq to make this list in heap
     # each item is in type of a 2-tuple, which is (value, node)
     priority_q = []
-    pair = ( heuristic(game_tree.root.point, game_tree.end_point) + 0, game_tree.root )
+    srt_pt, end_pt = game_tree.root.point, game_tree.end_point
+    if heuristic== default_heuristic:
+        pair = ( heuristic(srt_pt, end_pt) + 0, game_tree.root )
+    else:
+        # imporved version of heuristic funciton need to known the next
+        pair = ( heuristic(srt_pt, end_pt, game_tree.root.remain_num), game_tree.root)
+
     heappush( priority_q, pair)
 
     while len(priority_q) != 0:
@@ -89,7 +95,13 @@ def astar_find_solution(game_tree, show_profiling=False):
         node.appendchildren()
         for ch_name in node.children.keys():
             obj = node.children[ch_name]
-            pair = ( heuristic(obj.point,game_tree.end_point)+node.path_cost, node.children[ch_name])
+            srt_pt, end_pt = obj.point, game_tree.end_point
+            if heuristic== default_heuristic:
+                pair = ( heuristic(srt_pt, end_pt) +node.path_cost, node.children[ch_name] )
+            else:
+                # imporved version of heuristic funciton need to known the next
+                pair = ( heuristic(srt_pt, end_pt, obj.remain_num)+node.path_cost, node.children[ch_name])
+                #pair = ( heuristic(obj.point,game_tree.end_point)+node.path_cost, node.children[ch_name])
             heappush( priority_q, pair)
     #end while
 
