@@ -109,11 +109,11 @@ def load_table( max_size=18, max_steps= 3):
   print("distance={}".format(dis))
   return
 
-def store_table( max_size =8, max_steps=4):
+def store_table( max_size =7, max_steps=4, num_thread=4):
   ''' Generate the compute table
   '''
   table_name = './table/table_sz{}_stp{}.pickle'.format(max_size, max_steps)
-  t = table( max_sz=max_size,max_len=max_steps)
+  t = table( max_sz=max_size,max_len=max_steps,num_thread=num_thread)
   with open(table_name,'wb') as handle:
     pickle.dump(t,handle,protocol=pickle.HIGHEST_PROTOCOL)
 
