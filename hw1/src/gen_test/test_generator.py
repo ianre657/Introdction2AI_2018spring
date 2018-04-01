@@ -1,42 +1,41 @@
 from random import randint
 from pprint import pprint
 import sys
-choose = {
-  1:'x+',
-  2:'x-',
-  3:'y+',
-  4:'y-',
-  5:'pass'
-}
+import itertools
+
+sys.path.append('..')
+from table import find_path
+
+max_sz = 3
 
 def main():
+  global max_sz
   if len(sys.argv) < 2:
-    depth = int(input())
+    length = int(input())
   else:
-    depth = int(sys.argv[1])
-  print('depth :{}'.format(depth))
+    length = int(sys.argv[1])
+  print('depth :{}'.format(length))
 
-  x,y = (0,0)
-  num_list = []
-  for _ in range(depth):
-    r_int = randint(1,9)
-    r_choose_num = randint(1,5)
-    r_choose = choose[r_choose_num]
-    print('move:{}, int:{}'.format(r_choose, r_int))
-    if r_choose == 'x+':
-      x+=r_int
-    elif r_choose=='x-':
-      x-=r_int
-    elif r_choose=='y+':
-      y+=r_int
-    elif r_choose=='y-':
-      y-=r_int
-    num_list.append( r_int)
-  
-  print('x,y = {}, {}'.format((x,y), num_list ))
-  num_list.insert(0,y)
-  num_list.insert(0,x)
-  #print( ' '.join(num_list) ) 
-  pprint( ' '.join( map( str, num_list)) )
+  rng = range( max_sz+1)
+    # only generate grid points in the first quadrant
+  grid_points = [(x,y) for x,y in itertools.product( rng, rng ) ]
+
+  print('solution with {} steps'.format(length))
+  for point in grid_points:
+    num_iter = 10**length
+    for i in range(num_iter):
+      nm_arr = [ int(i) for i in str(i) ]
+      nm_arr = [0]*(length - len(nm_arr))+nm_arr
+      
+      ans = []
+      sol = find_path( point,nm_arr)
+      if sol and sol.steps==length:
+        ans.append(point[0])
+        ans.append(point[1])
+        for node in sol[1:]:
+          ans.append(node.number)
+        ans = [ str(i) for i in ans]
+        print( ' '.join(ans) )
+
 if __name__ == '__main__':
     main()

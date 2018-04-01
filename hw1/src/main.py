@@ -17,7 +17,9 @@ from table import table
 from table import pt_solution_table
 from table import load_table
 
-t = load_table(max_size=8, max_steps=4)
+table_size = 18
+table_steps = 4
+t = load_table(max_size=table_size, max_steps=table_steps)
 
 def improved_heuristic(point, endpoint, numbers):
     global table
@@ -28,6 +30,9 @@ def improved_heuristic(point, endpoint, numbers):
     dist = t.find_distance( vec, numbers) 
     if dist != None:
         return dist
+    # table have indicate that there are at least `table_steps+1` steps in the solution
+    elif abs(vec[0]) < table_size and abs(vec[1]) < table_size:
+        return table_steps+1
     else:
         return floor( abs(vec[0])/9)+ floor(abs(vec[1])/9)
 
