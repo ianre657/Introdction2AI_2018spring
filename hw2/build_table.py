@@ -41,6 +41,8 @@ class table_lookup:
     Return Value:
         another node_id(int), or None if not exists
     '''
+    if node_id is None:
+      return None
     if direction == "TL":
       if node_id<=116:
         x,y = -1,-1
