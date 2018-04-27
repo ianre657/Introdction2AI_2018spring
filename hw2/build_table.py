@@ -42,17 +42,29 @@ class table_lookup:
         another node_id(int), or None if not exists
     '''
     if direction == "TL":
-      x,y = -1,-1
+      if node_id<=116:
+        x,y = -1,-1
+      else:
+        x,y = 0,-1
     elif direction == "TR":
-      x,y = 0,-1
+      if node_id <= 116:
+        x,y = 0,-1
+      else:
+        x,y = 1,-1
     elif direction == "L":
       x,y = -1,0
     elif direction == "R":
       x,y = 1,0
     elif direction == "DL":
-      x,y = 0,1
+      if node_id >=100:
+        x,y = -1,1
+      else:
+        x,y = 0,1
     elif direction == "DR":
-      x,y = 1,1
+      if node_id >=100:
+        x,y = 0,1
+      else:
+        x,y = 1,1
     else:
       raise("unknown diection")
 
@@ -65,8 +77,11 @@ class table_lookup:
     #print(f'cx{cur_x}, cy:{cur_y}')
     # target 
     tx,ty = cur_x+dif_x, cur_y+dif_y
+    #print(f'len:{len(self.row_list)}')
+    #print(f'tx:{tx},ty:{ty}')
     #print(f'tx:{tx}, ty:{ty}')
-    if tx<0 or ty<0 or ty>len(self.row_list):
+    #print(f'row9:{self.row_list[8]}')
+    if tx<0 or ty<0 or ty>=len(self.row_list):
       return None
 
     if tx < len(self.row_list[ty]):
@@ -78,7 +93,11 @@ class table_lookup:
 
 def main():
   table = table_lookup()
-  i = table.get_id_by_relation(10, "DR")
-  pprint(i)
+  while True:
+    nid = int(input("Node id:"))
+    di = input("dieection:").upper()
+    #i = table.get_id_by_relation(216, "DR")
+    i = table.get_id_by_relation(nid, di)
+    pprint(i)
 if __name__ == "__main__":
   main()
