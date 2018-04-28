@@ -110,7 +110,7 @@ class table_lookup:
       n:  要數連續幾子
     
     回傳範例:
-      n_node_down(85,'DL')
+      self.n_node_down(85,'DL',3)
         =>[101,117,None]
 
     '''
