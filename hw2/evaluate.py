@@ -1,32 +1,124 @@
+import collections
+import functools
+
 from time import time
 
 from build_table import table_lookup
 
+
 point_table = table_lookup()
 
-def evaluation_func(dict):
-  pass
+
+class point_score:
+  ''' 儲存單一點的分數
+  額外儲存三個方向上的分數
+  '''
+  def sum_score(self):
+    self.score = sum(self.direction_score.values())
+  def __init__(self, dic):
+    #print(dic)
+    self.direction_score = {'TL_DR':None,'L_R':None, 'TR_DL':None}
+    for k,v in dic.items():
+      self.direction_score[k] = v
+    self.sum_score()
+  def __repr__(self):
+    return f'<point_score total:{self.score};{self.direction_score}>'
 
 
-def get_point_score( lookup_table,point_index, board, evaluation_func):
-  table = lookup_table
-  node = point_index
+def evaluation_func(match_dic):
+  value = {
+    2:100,
+    3:1000,
+    4:10000,
+    5:1000000
+  }
+  result = 0
+  for k,v in match_dic.items():
+    result +=  value[k]* v 
+  return result
+
+def get_board_score(lookup_table, board, evaluation_func):
+  import random 
+  points_to_evaluate = [ random.randint(0,216) for _ in range(4)]
+  return random.randint(1,200)
+
+def get_point_score_in_direction( lookup_table,point_index, board, evaluation_func,direction):
+  '''dir = TL_DR, L_R, TR_DL
+  '''
   count = {2:0, 3:0,4:0,5:0}
   for rng in [2,3,4,5]:
-    tl_dr = table.get_node_subrange(node)[rng]['TL_DR']
-    l_r = table.get_node_subrange(node)[rng]['L_R']
-    tr_dl = table.get_node_subrange(node)[rng]['TR_DL']
-    for directions in [tl_dr,l_r,tr_dl]:
-      for li in directions:
-        good = True
-        for i in li:
-          if board[i] !=1:
-            good = False 
-            break;
-        if good is True:
-          count[len(li)] +=1
-  return count
+    compute_range_list = lookup_table.get_node_subrange(point_index)[rng][direction]
+    for li in compute_range_list:
+      good = True
+      for i in li:
+        if board[i] !=1:
+          good = False 
+          break;
+      if good is True:
+        count[len(li)] +=1
+  return evaluation_func(count)
 
+def get_point_score( lookup_table,point_index, board, evaluation_func):
+  calc_dir_score = functools.partial( get_point_score_in_direction, lookup_table,point_index,board,evaluation_func)
+  table = lookup_table
+  node = point_index
+
+  outcome_dic = {}
+  outcome_dic['TL_DR'] = calc_dir_score("TL_DR")
+  outcome_dic['L_R'] = calc_dir_score("L_R")
+  outcome_dic['TR_DL'] = calc_dir_score("TR_DL")
+  return point_score(outcome_dic)
+
+
+
+class board_view:
+  '''某一瞬間的棋盤，額外儲存每個格子點的分數與盤面的分數
+  '''
+  def __init__(self,board,point_scores,lookup_table,evaluation_function,recompute_pt_dict=None):
+    '''
+      參數:
+        recompute_pt_dict:要重新計算的節點跟重新計算的方向 { node_idx:{'TL_DR'} }
+    '''
+    self.board = board[:] 
+    self.point_scores = point_scores[:]
+    self.board_score = None
+
+    self.lookup_table = lookup_table
+    self.evaluation_function = evaluation_function
+    
+    for node_id,direction in recompute_pt_dict.items:
+      new_direction_score = get_point_score_in_direction( self.lookup_table,node_id, self.board, self.evaluation_function, direction)
+      pt = self.point_scores[node_id]
+      pt.direction_score[direction] = new_direction_score
+      pt.sum_score()
+
+  def get_board_score(self):
+    return self.board_score
+  
+  def create_new_board(self, new_node):
+    '''根據目前盤面來建立出新盤面
+    更新以目前點畫出直線在距離(4)內的所有點
+    '''
+    def merged_node_list(node,dir1, dir2,n):
+      dir1 = self.lookup_table.n_node_down( node, dir1,n)
+      dir2 = self.lookup_table.n_node_down( node, dir2,n)
+      return [i for i in list(dir1+dir2) if i != None]
+
+    n = 4
+    tl_dr = merged_node_list(new_node,'TL','DR',n)
+    l_r  = merged_node_list(new_node,'L','R',n)
+    tr_dl = merged_node_list(new_node,'TR','DL',n)
+    
+    recompute_nodes = {}
+    for node in tl_dr:
+      recompute_nodes[node] = "TL_DR"
+    for node in l_r:
+      recompute_nodes[node] = "L_R"
+    for node in tr_dl:
+      recompute_nodes[node] = "TR_DL"
+
+    # 還沒寫更新中心點的運算式
+    return None
 
 board_value = [85,102,103,118,119,120,134]
 board = [0 for i in range(217)]
@@ -34,13 +126,16 @@ for i in board_value:
   board[i] = 1
 
 if __name__ == "__main__":
+  pt_score = get_point_score(point_table,119,board,evaluation_func)
+  print(pt_score)
+  exit(0)
 
   iterate = 200000
 
   start = time()
   for _ in range(iterate):
-    count = count = get_point_score(point_table,119,board,None)
-    #print(count)
+    count = get_point_score(point_table,119,board,evaluation_func)
+    print(count)
   end = time()
   print("second:{:2f} sec".format(end-start))
   print("-----")
