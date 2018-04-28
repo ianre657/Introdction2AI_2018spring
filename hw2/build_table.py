@@ -1,5 +1,5 @@
 from pprint import pprint
-
+import time
 class table_lookup:
   '''六角形棋盤的查找表
 
@@ -101,6 +101,21 @@ class table_lookup:
 
     # get node one the line
   
+  def __build_n_node_down_cache(self):
+    '''將 n_node_down n<=5 情況下的結果都儲存下來
+    (在n<=5 的情況下執行速度可以加快約10倍)
+    '''
+    self.n_node_down_cache = [ {} for i in range(217) ]
+    for point_index in range(217):
+      for direction in ['TL','TR','L','R','DL','DR']:
+        result = []
+        cur_point = point_index
+        for _ in range(5):
+          next_node = self.get_id_by_relation( cur_point,direction)
+          result.append(next_node)
+          cur_point = next_node
+        self.n_node_down_cache[point_index][direction] = result
+
   def n_node_down( self,point_index, direction, n):
     ''' 回傳任意編號棋子在任何方向上連續數下去n個位置的棋子編號 
       當值超過邊界的節點時回傳id會以None替代掉
@@ -114,6 +129,10 @@ class table_lookup:
         =>[101,117,None]
 
     '''
+    if n <= 5:
+      outcome = self.n_node_down_cache[point_index][direction]
+      return outcome[:n]
+
     result = []
     cur_point = point_index
     #print(f'idx:{point_index}, dir:{direction}')
@@ -122,7 +141,6 @@ class table_lookup:
       result.append(next_node)
       cur_point = next_node
     return result
-
 
   def get_node_subrange(self, node_id):
     '''回傳計算分數時三個方向上所要考慮的陣列
@@ -185,7 +203,8 @@ class table_lookup:
         self.node_range_table[i][rng]['L_R'] = l_r
         self.node_range_table[i][rng]['TR_DL'] = tr_dl
     pass
-  
+
+
   def __init__(self):
     self.table_hash = dict(self.build_table_dict())
     self.row_list = [[] for _ in range(17)]
@@ -194,15 +213,21 @@ class table_lookup:
       self.row_list[v['row']].append(k)
     for li in self.row_list:
       li.sort()
+    self.__build_n_node_down_cache()
     self.__build_node_subrange()
+
 
 def main():
   table = table_lookup()
+
+  #start = time.time()
   while True:
     nid = int(input("Node id:"))
     di = input("direction:").upper()
-    #i = table.get_id_by_relation(216, "DR")
-    i = table.get_id_by_relation(nid, di)
+    i = table.n_node_down(nid,di,4)
     pprint(i)
+  #end = time.time()
+  #print('{:2f} sec'.format(end-start))
+
 if __name__ == "__main__":
   main()
