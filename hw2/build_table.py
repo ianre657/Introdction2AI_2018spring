@@ -1,5 +1,18 @@
 from pprint import pprint
+
 class table_lookup:
+  '''六角形棋盤的查找表
+
+  Attributes:
+    @self.table_hash: 儲存每個棋子編號所對應到的二維位置(row,col)
+    @self.rowlist: 儲存每一個row中所具有的棋子
+    @self.node_subrange_hash: 儲存每個點在評估分數時要取用的其他點
+
+  functions:
+    get_id_by_relation: 回傳任意編號棋子在特定方向上的棋子編號
+    n_node_down: 回傳任意編號棋子在任何方向上連續數下去n個位置的棋子編號
+    get_node_subrange: 回傳計算分數時三個方向上所要考慮的陣列
+  '''
   def build_table_dict(self):
     start_idx = [
       0,9,19,30,42,55,69,84,100,117,133,148,162,175,187,198,
@@ -24,22 +37,16 @@ class table_lookup:
           table_hash[i] = {'row':idx, 'index':i-rang[0]}
     return table_hash
 
-  def __init__(self):
-    self.table_hash = dict(self.build_table_dict())
-    self.row_list = [[] for _ in range(17)]
-    #print(len(row_list))
-    for k,v in self.table_hash.items():
-      self.row_list[v['row']].append(k)
-    for li in self.row_list:
-      li.sort()
-  
   def get_id_by_relation(self,node_id,direction):
-    '''
-    Arguments:
+    '''回傳任意編號棋子在特定方向上的棋子編號
+    如果存取超過邊界時會回傳None
+
+    參數解釋:
       @node_id(int):0~216
       @direction(str):one of  TL, TR, L, R, DL, DR
-    Return Value:
-        another node_id(int), or None if not exists
+    回傳範例:
+      get_id_by_relation(102,"DR")
+        => 119
     '''
     if node_id is None:
       return None
@@ -90,14 +97,110 @@ class table_lookup:
       return self.row_list[ty][tx]
     else:
       return None
-    
 
+
+    # get node one the line
+  
+  def n_node_down( self,point_index, direction, n):
+    ''' 回傳任意編號棋子在任何方向上連續數下去n個位置的棋子編號 
+      當值超過邊界的節點時回傳id會以None替代掉
+
+    參數解釋:
+      direction: 'TL','TR','L','R','DL','DR' 任意字串
+      n:  要數連續幾子
+    
+    回傳範例:
+      n_node_down(85,'DL')
+        =>[101,117,None]
+
+    '''
+    result = []
+    cur_point = point_index
+    #print(f'idx:{point_index}, dir:{direction}')
+    for _ in range(n):
+      next_node = self.get_id_by_relation( cur_point,direction)
+      result.append(next_node)
+      cur_point = next_node
+    return result
+
+
+  def get_node_subrange(self, node_id):
+    '''回傳計算分數時三個方向上所要考慮的陣列
+    使用方法:
+      get_node_subrange(node_id)[路徑長度][路徑方向]
+        路徑長度為2~5的整數
+        路徑方向為 "TL_DR", "L_R", "TR_DL" 
+    回傳範例:
+      get_node_subrange(103)[3]['TL_DR'] 
+       => [ [70,86,103],[86,103,120], [103,120,136] ]
+    '''
+    return self.node_range_table[node_id]
+
+  def __node_subrange(self,node,dir1,dir2,range_num):
+    ''' Create subranges to go through with given node_id and the length of the subrange
+    '''
+    def build_subrange( list1, list2, node,rng):
+      ''' construct a list of list which each element have length "rng"
+      the template to generate the sublist is 
+          list1+[node]+list2 
+      '''
+      a = [i for i in list1 if i!= None]
+      b = [i for i in list2 if i!= None]
+      a_list=[]
+      b_list=[]
+      for i in range(rng):
+        if i<=len(a) and i<=len(b):
+          #print(f'i={i}')
+          if i!=0:
+            a_list.append( a[-i:] )
+          else:
+            a_list.append([])
+          if rng-1-i!=0:
+            b_list.append( b[:rng-1-i] )
+          else:
+            b_list.append( [])
+      result = []
+      for i,j in zip(a_list,b_list):
+        result.append( i+[node]+j)
+      #for i in result:
+      #  print(i)
+      return result
+    return build_subrange(
+      list1=self.n_node_down(node,dir1,range_num)[::-1],
+      list2=self.n_node_down(node,dir2,range_num),
+      node=node,
+      rng=range_num
+    )
+
+  def __build_node_subrange(self):
+    # 0~216
+    self.node_range_table = [ {2:{},3:{},4:{},5:{}} for i in range(217)]
+
+    for i in range(217):
+      for rng in [2,3,4,5]:
+        tl_dr = self.__node_subrange(i, "TL","DR", rng)
+        l_r = self.__node_subrange(i, "L","R", rng)
+        tr_dl = self.__node_subrange(i, "DL", "TR", rng)
+        self.node_range_table[i][rng]['TL_DR'] = tl_dr
+        self.node_range_table[i][rng]['L_R'] = l_r
+        self.node_range_table[i][rng]['TR_DL'] = tr_dl
+    pass
+  
+  def __init__(self):
+    self.table_hash = dict(self.build_table_dict())
+    self.row_list = [[] for _ in range(17)]
+    #print(len(row_list))
+    for k,v in self.table_hash.items():
+      self.row_list[v['row']].append(k)
+    for li in self.row_list:
+      li.sort()
+    self.__build_node_subrange()
 
 def main():
   table = table_lookup()
   while True:
     nid = int(input("Node id:"))
-    di = input("dieection:").upper()
+    di = input("direction:").upper()
     #i = table.get_id_by_relation(216, "DR")
     i = table.get_id_by_relation(nid, di)
     pprint(i)
