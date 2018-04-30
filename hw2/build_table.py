@@ -162,27 +162,50 @@ class table_lookup:
       the template to generate the sublist is 
           list1+[node]+list2 
       '''
+      def first_n(li,n):
+        if n>len(li):
+          return []
+        return li[0:n]
+      def last_n(li,n):
+        if n>len(li) or n==0:
+          return []
+        return li[-n:]
+        
       a = [i for i in list1 if i!= None]
       b = [i for i in list2 if i!= None]
       a_list=[]
       b_list=[]
       for i in range(rng):
-        if i<=len(a) and i<=len(b):
-          #print(f'i={i}')
-          if i!=0:
-            a_list.append( a[-i:] )
-          else:
-            a_list.append([])
-          if rng-1-i!=0:
-            b_list.append( b[:rng-1-i] )
-          else:
-            b_list.append( [])
+
+        #if i<=len(a) and i<=len(b):
+        last_a = last_n(a,i)
+        first_b = first_n(b,rng-1-i)
+        if len(last_a)+len(first_b) == rng-1:
+          a_list.append( last_n(a,i))
+          b_list.append( first_n(b,rng-1-i))
+        #if i<=len(a) and i<=len(b):
+          #if i!=0:      
+          #  a_list.append( a[-i:] )
+          #else:
+          #  a_list.append([])
+          #if rng-1-i!=0:
+          #  b_list.append( b[:rng-1-i] )
+          #else:
+          #  b_list.append( [])
       result = []
+
+      #if node == 4:
+      #  print(f'node={node}, rng={rng}')
+      #  print(f'a={a}, b={b}')
+      #  print(f'alist={a_list},blist={b_list}')
+      #  print('----')
+
       for i,j in zip(a_list,b_list):
+        #print(f'i:{i}, node:{node} j:{j}')
         result.append( i+[node]+j)
-      #for i in result:
-      #  print(i)
+
       return result
+
     return build_subrange(
       list1=self.n_node_down(node,dir1,range_num)[::-1],
       list2=self.n_node_down(node,dir2,range_num),
@@ -194,15 +217,24 @@ class table_lookup:
     # 0~216
     self.node_range_table = [ {2:{},3:{},4:{},5:{}} for i in range(217)]
 
+    
     for i in range(217):
       for rng in [2,3,4,5]:
+        #print("TL-DR:")
         tl_dr = self.__node_subrange(i, "TL","DR", rng)
+        #print("L-R:")
         l_r = self.__node_subrange(i, "L","R", rng)
+        #print("TR-DL")
         tr_dl = self.__node_subrange(i, "DL", "TR", rng)
+
         self.node_range_table[i][rng]['TL_DR'] = tl_dr
         self.node_range_table[i][rng]['L_R'] = l_r
         self.node_range_table[i][rng]['TR_DL'] = tr_dl
-    pass
+    
+      #if i==4:
+      #  print(f'node :{i}')
+      #  pprint( self.node_range_table[i]) 
+      #  exit(0)
 
 
   def __init__(self):
@@ -219,6 +251,8 @@ class table_lookup:
 
 def main():
   table = table_lookup()
+  print( table.n_node_down(4,"DL",5) )
+  exit(0)
 
   #start = time.time()
   while True:
