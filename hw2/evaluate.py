@@ -1,5 +1,6 @@
 import collections
 import functools
+import random
 
 from time import time
 
@@ -28,8 +29,8 @@ class point_score:
 
 def evaluation_func(match_dic):
   value = {
-    2:100,
-    3:1000,
+    2:1,
+    3:100,
     4:10000,
     5:1000000
   }
@@ -46,9 +47,13 @@ def get_board_score(lookup_table, board, evaluation_func):
 def get_point_score_in_direction( lookup_table,point_index, board, evaluation_func,direction):
   '''dir = TL_DR, L_R, TR_DL
   '''
-  count = {2:0, 3:0,4:0,5:0}
+  #print(f"--call--")
+  #print(f'pt_index ={point_index}, direction={direction}')
+  count = { 2:0, 3:0,4:0,5:0}
+  #print(f'nd_subrange:{lookup_table.get_node_subrange(point_index)}')
   for rng in [2,3,4,5]:
     compute_range_list = lookup_table.get_node_subrange(point_index)[rng][direction]
+    #print(f'rng={rng}')
     for li in compute_range_list:
       good = True
       for i in li:
@@ -56,6 +61,8 @@ def get_point_score_in_direction( lookup_table,point_index, board, evaluation_fu
           good = False 
           break;
       if good is True:
+
+        #print(f'rng_list:{compute_range_list},len_li:{len(li)}')
         count[len(li)] +=1
   return evaluation_func(count)
 
@@ -96,9 +103,12 @@ class board_view:
 
     if recompute_all != True and recompute_pt_dict != None:
       for node_id,direction in recompute_pt_dict.items():
-        new_direction_score = get_point_score_in_direction( self.lookup_table,node_id, self.board, self.evaluation_function, direction)
         pt = self.point_scores[node_id]
-        pt.direction_score[direction] = new_direction_score
+        if self.board[node_id] == 0:
+          pt.direction_score[direction]=0
+        else:
+          new_direction_score = get_point_score_in_direction( self.lookup_table,node_id, self.board, self.evaluation_function, direction)
+          pt.direction_score[direction] = new_direction_score
         pt.sum_score()
     
     self.board_score = sum( [s.score for s in  self.point_scores] )
@@ -147,30 +157,44 @@ if __name__ == "__main__":
   #print(pt_score)
   #exit(0)
 
-  iterate = 200000
+  iterate = 100000
 
-  def new_board():
+  def new_board(bview=None):
+    if bview is None:
+      bview = board
     return board_view(
-    board=board,
+    board=bview,
     point_scores=None,
     lookup_table=point_table,
     evaluation_function=evaluation_func,
     recompute_all=True
     )
 
-  #start = time()
-  #for _ in range(iterate):
-  #  b = new_board()
-  #end = time()
-  #print("first:{:2f} sec".format(end-start))
-  #print("-----")
 
   start = time()
   b = new_board()
+
+  bi = b
+  bn = None
   for _ in range(iterate):
-    b2 = b.create_new_board(135,1)
-    b3 = b2.create_new_board(101,1)
-    b4 = b3.create_new_board(86,1)
+    blank = [ i for i in bi.board  if i != None ]
+    if len(blank)!=0:
+      next_move = random.randint(0,len(blank)-1)
+      bn = bi.create_new_board(next_move,1)
+      
+      #next_board = bi.board[:]
+      #next_board[next_move] = 1
+      #bn = new_board(next_board)
+    else:
+      blank = [ i for i in b.board  if i != None ]
+      next_move = random.randint(0,len(blank)-1)
+      bn = b.create_new_board(next_move,1)
+    bi = bn
+    #b2 = b.create_new_board(135,1)
+    #b3 = b2.create_new_board(91,1)
+      
+    
+    
   end = time()
   print("second:{:2f} sec".format(end-start))
   print("-----")
