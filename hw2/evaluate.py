@@ -11,20 +11,22 @@ point_table = table_lookup()
 
 
 class point_score:
-  ''' 儲存單一點的分數
-  額外儲存三個方向上的分數
+  ''' 儲存單一點的分數，該點上是哪一子
+  並額外儲存三個方向上的分數
   '''
   def sum_score(self):
     self.score = sum(self.direction_score.values())
-  def __init__(self, dic=None):
-    #print(dic)
+  def __init__(self, dic=None,point_type=None):
+    
+    self.pt_type = point_type
+    self.score = 0
     self.direction_score = {'TL_DR':0,'L_R':0, 'TR_DL':0}
     if dic != None:
       for k,v in dic.items():
         self.direction_score[k] = v
     self.sum_score()
   def __repr__(self):
-    return f'<point_score total:{self.score};{self.direction_score}>'
+    return f'<point_score point_type={self.pt_type} total:{self.score};{self.direction_score[self.pt_val]}>'
 
 
 def evaluation_func(match_dic):
@@ -44,12 +46,17 @@ def get_board_score(lookup_table, board, evaluation_func):
   points_to_evaluate = [ random.randint(0,216) for _ in range(4)]
   return random.randint(1,200)
 
-def get_point_score_in_direction( lookup_table,point_index, board, evaluation_func,direction):
+def get_point_score_in_direction( lookup_table,point_index, board, evaluation_func,direction, point_type ):
   '''dir = TL_DR, L_R, TR_DL
+  point_type is 1 or 2(我方 or 對方)
   '''
-  #print(f"--call--")
-  #print(f'pt_index ={point_index}, direction={direction}')
+  # 點的值如果不相同不可能基於該值而產生連線
+  # ex.在黑子上問目前該點白子的連線數 ->一定為0
+  if board[point_index] != point_type:
+    return 0
+
   count = { 2:0, 3:0,4:0,5:0}
+
   #print(f'nd_subrange:{lookup_table.get_node_subrange(point_index)}')
   for rng in [2,3,4,5]:
     compute_range_list = lookup_table.get_node_subrange(point_index)[rng][direction]
@@ -57,7 +64,7 @@ def get_point_score_in_direction( lookup_table,point_index, board, evaluation_fu
     for li in compute_range_list:
       good = True
       for i in li:
-        if board[i] !=1:
+        if board[i] !=point_type:
           good = False 
           break;
       if good is True:
@@ -66,18 +73,14 @@ def get_point_score_in_direction( lookup_table,point_index, board, evaluation_fu
         count[len(li)] +=1
   return evaluation_func(count)
 
-def get_point_score( lookup_table,point_index, board, evaluation_func):
+def get_point_score( lookup_table,point_index, board, evaluation_func,point_type):
   calc_dir_score = functools.partial( get_point_score_in_direction, lookup_table,point_index,board,evaluation_func)
-  table = lookup_table
-  node = point_index
 
   outcome_dic = {}
-  outcome_dic['TL_DR'] = calc_dir_score("TL_DR")
-  outcome_dic['L_R'] = calc_dir_score("L_R")
-  outcome_dic['TR_DL'] = calc_dir_score("TR_DL")
-  return point_score(outcome_dic)
-
-
+  outcome_dic['TL_DR'] = calc_dir_score("TL_DR",point_type)
+  outcome_dic['L_R'] = calc_dir_score("L_R",point_type)
+  outcome_dic['TR_DL'] = calc_dir_score("TR_DL", point_type)
+  return point_score(outcome_dic, point_type)
 
 class board_view:
   '''某一瞬間的棋盤，額外儲存每個格子點的分數與盤面的分數
@@ -85,45 +88,63 @@ class board_view:
   def __init__(self,board,point_scores,lookup_table,evaluation_function,recompute_pt_dict=None, recompute_all=False):
     '''
       參數:
-        recompute_pt_dict:要重新計算的節點跟重新計算的方向 { node_idx:{'TL_DR'} }
+        recompute_pt_dict: 要重新計算的節點跟重新計算的方向 { node_idx:{'TL_DR'} }
     '''
-    self.board = board[:] 
+    self.board = board[:]
     self.lookup_table = lookup_table
     self.evaluation_function = evaluation_function
-    self.board_score = 0
+
+    # 紀錄整個盤面上兩方的總成績
+    self.board_score = { 1:0, 2:0}
 
     # init point scores
     if recompute_all == True:
-      self.point_scores = [point_score() for _ in range(217)]
+      # 1 是我方
+      # 2 是敵方
+      # 紀錄整個盤面上分別每個點雙方的成績
+      self.point_scores = [ 0 for _ in range(217)]
       for i in range(217):
-        self.point_scores[i] = get_point_score(self.lookup_table,i,self.board,self.evaluation_function)
+        if self.board[i] != 0:
+          # get point score中有自己做優化
+          self.point_scores[i] = get_point_score(self.lookup_table,i,self.board,self.evaluation_function,self.board[i])
+        else:
+          self.point_scores[i] = point_score(point_type=0)
     else:
       self.point_scores = point_scores[:]
-
 
     if recompute_all != True and recompute_pt_dict != None:
       for node_id,direction in recompute_pt_dict.items():
         pt = self.point_scores[node_id]
-        if self.board[node_id] == 0:
+        if self.board[node_id] == 0: # 不太可能的情況，因為不會把為0的格子點列入重算
           pt.direction_score[direction]=0
         else:
-          new_direction_score = get_point_score_in_direction( self.lookup_table,node_id, self.board, self.evaluation_function, direction)
+          new_direction_score = get_point_score_in_direction( self.lookup_table,node_id, self.board, self.evaluation_function, direction,self.board[node_id])
           pt.direction_score[direction] = new_direction_score
         pt.sum_score()
     
-    self.board_score = sum( [s.score for s in  self.point_scores] )
+    node_1 = [ i for i in self.board if self.board[i]==1 ]
+    node_2 = [ i for i in self.board if self.board[i]==2 ]
+    s1,s2 =0,0
+    for i in node_1:
+      s1 += self.point_scores[i].score
+    for i in node_2:
+      s2 += self.point_scores[i].score
+    self.board_score[1] = s1
+    self.board_score[2] = s2
 
-  def get_board_score(self):
-    return self.board_score
+  def get_board_score(self, point_type):
+    return self.board_score[point_type]
   
   def create_new_board(self, new_node, new_node_value):
     '''根據目前盤面來建立出新盤面
     更新以目前點畫出直線在距離(4)內的所有點
     '''
     def merged_node_list(node,dir1, dir2,n):
+      '''回傳存在且不為空格的點
+      '''
       dir1 = self.lookup_table.n_node_down( node, dir1,n)
       dir2 = self.lookup_table.n_node_down( node, dir2,n)
-      return [i for i in list(dir1+dir2) if i != None]
+      return [i for i in list(dir1+dir2) if i != None and self.board_score[i]!= 0]
 
     n = 4
     tl_dr = merged_node_list(new_node,'TL','DR',n)
@@ -131,19 +152,20 @@ class board_view:
     tr_dl = merged_node_list(new_node,'TR','DL',n)
     
     recompute_nodes = {}
+    #{ node_id:要重新計算的方向 }
     for node in tl_dr:
       recompute_nodes[node] = "TL_DR"
     for node in l_r:
       recompute_nodes[node] = "L_R"
     for node in tr_dl:
       recompute_nodes[node] = "TR_DL"
-
+ 
     new_board = self.board[:]
     new_point_scores = self.point_scores[:]
 
     #重新計算落點新的分數
     new_board[new_node] = new_node_value
-    new_point_scores[new_node] = get_point_score( self.lookup_table,new_node,new_board, self.evaluation_function)
+    new_point_scores[new_node] = get_point_score( self.lookup_table,new_node,new_board, self.evaluation_function,new_node_value)
     
     return board_view(new_board,new_point_scores,self.lookup_table,self.evaluation_function,recompute_pt_dict=recompute_nodes)
 
@@ -157,7 +179,7 @@ if __name__ == "__main__":
   #print(pt_score)
   #exit(0)
 
-  iterate = 100000
+  iterate = 10000
 
   def new_board(bview=None):
     if bview is None:
