@@ -4,6 +4,7 @@ import random
 
 from time import time
 
+
 from build_table import table_lookup
 
 
@@ -26,7 +27,7 @@ class point_score:
         self.direction_score[k] = v
     self.sum_score()
   def __repr__(self):
-    return f'<point_score point_type={self.pt_type} total:{self.score};{self.direction_score[self.pt_val]}>'
+    return f'<point_score point_type={self.pt_type} total:{self.score};{self.direction_score[self.pt_type]}>'
 
 
 def evaluation_func(match_dic):
@@ -34,7 +35,7 @@ def evaluation_func(match_dic):
     2:1,
     3:100,
     4:10000,
-    5:1000000
+    5:100000000
   }
   result = 0
   for k,v in match_dic.items():
@@ -49,6 +50,7 @@ def get_board_score(lookup_table, board, evaluation_func):
 def get_point_score_in_direction( lookup_table,point_index, board, evaluation_func,direction, point_type ):
   '''dir = TL_DR, L_R, TR_DL
   point_type is 1 or 2(我方 or 對方)
+  如果在某個方向發現遊戲終止，回傳tuple的第二個值會是True而不是False
   '''
   # 點的值如果不相同不可能基於該值而產生連線
   # ex.在黑子上問目前該點白子的連線數 ->一定為0
@@ -58,7 +60,7 @@ def get_point_score_in_direction( lookup_table,point_index, board, evaluation_fu
   count = { 2:0, 3:0,4:0,5:0}
 
   #print(f'nd_subrange:{lookup_table.get_node_subrange(point_index)}')
-  for rng in [2,3,4,5]:
+  for rng in [5,4,3,2]:
     compute_range_list = lookup_table.get_node_subrange(point_index)[rng][direction]
     #print(f'rng={rng}')
     for li in compute_range_list:
@@ -68,19 +70,27 @@ def get_point_score_in_direction( lookup_table,point_index, board, evaluation_fu
           good = False 
           break;
       if good is True:
-
-        #print(f'rng_list:{compute_range_list},len_li:{len(li)}')
         count[len(li)] +=1
-  return evaluation_func(count)
+
+        #發現遊戲中止，沒有必要再算下去
+        if(rng==5):
+          return evaluation_func(count),True
+        #print(f'rng_list:{compute_range_list},len_li:{len(li)}')
+        
+  return evaluation_func(count),False
 
 def get_point_score( lookup_table,point_index, board, evaluation_func,point_type):
+  '''回傳單點之得分數，如果該點造成遊戲終止(五子連線)則回傳tuple的第二個值會為True
+  '''
   calc_dir_score = functools.partial( get_point_score_in_direction, lookup_table,point_index,board,evaluation_func)
 
   outcome_dic = {}
-  outcome_dic['TL_DR'] = calc_dir_score("TL_DR",point_type)
-  outcome_dic['L_R'] = calc_dir_score("L_R",point_type)
-  outcome_dic['TR_DL'] = calc_dir_score("TR_DL", point_type)
-  return point_score(outcome_dic, point_type)
+  end = False
+  outcome_dic['TL_DR'],end1 = calc_dir_score("TL_DR",point_type)
+  outcome_dic['L_R'],end2 = calc_dir_score("L_R",point_type)
+  outcome_dic['TR_DL'],end3 = calc_dir_score("TR_DL", point_type)
+  end = end or end1 or end2 or end3
+  return point_score(outcome_dic, point_type),end
 
 class board_view:
   '''某一瞬間的棋盤，額外儲存每個格子點的分數與盤面的分數
@@ -106,7 +116,7 @@ class board_view:
       for i in range(217):
         if self.board[i] != 0:
           # get point score中有自己做優化
-          self.point_scores[i] = get_point_score(self.lookup_table,i,self.board,self.evaluation_function,self.board[i])
+          self.point_scores[i],_ = get_point_score(self.lookup_table,i,self.board,self.evaluation_function,self.board[i])
         else:
           self.point_scores[i] = point_score(point_type=0)
     else:
@@ -118,12 +128,14 @@ class board_view:
         if self.board[node_id] == 0: # 不太可能的情況，因為不會把為0的格子點列入重算
           pt.direction_score[direction]=0
         else:
-          new_direction_score = get_point_score_in_direction( self.lookup_table,node_id, self.board, self.evaluation_function, direction,self.board[node_id])
+          #這裡就算發現會結束也不會回傳,因為造成結束的點不會是這個點，而是self.create_new_board中填入的點
+          #另外，因為init沒辦法回傳值所以在這裡進行遊戲終止判斷也不太適合
+          new_direction_score,_ = get_point_score_in_direction( self.lookup_table,node_id, self.board, self.evaluation_function, direction,self.board[node_id])
           pt.direction_score[direction] = new_direction_score
         pt.sum_score()
     
-    node_1 = [ i for i in self.board if self.board[i]==1 ]
-    node_2 = [ i for i in self.board if self.board[i]==2 ]
+    node_1 = [ i for i in range(217) if self.board[i]==1 ]
+    node_2 = [ i for i in range(217) if self.board[i]==2 ]
     s1,s2 =0,0
     for i in node_1:
       s1 += self.point_scores[i].score
@@ -135,16 +147,51 @@ class board_view:
   def get_board_score(self, point_type):
     return self.board_score[point_type]
   
+  def check_borad_end(self):
+    '''檢查是否有任何一方獲勝,
+    或是和局(雙方皆沒獲勝，而且棋盤沒有空格)
+    '''
+    check_list = self.lookup_table.get_end_checking_table()
+    # 檢查單一條直線中是否有連續五個子
+    def check_line(line):
+      # Line中為棋盤上存在於一直線中的node id
+      count = 0
+      last_val=0
+      for i in line:
+        cur_val = self.board[i]
+        if cur_val == last_val and cur_val != 0:
+          count += 1
+          if count == 5:
+            return True
+        else:
+          count =1
+        last_val = cur_val 
+      return False
+
+    for li in check_list:
+      #if li[0] == 19 and li[1]==20:
+        #print("THERE!") 
+      if check_line(li) == True:
+        return True
+    
+    #檢查是否有空格可以放棋子
+    for i in range(217):
+      if self.board[i]!=0:
+        return False
+    return True
+
   def create_new_board(self, new_node, new_node_value):
     '''根據目前盤面來建立出新盤面
     更新以目前點畫出直線在距離(4)內的所有點
+
+    回傳值(tuple): -> (新產生的盤面,是否造成遊戲終止)
     '''
     def merged_node_list(node,dir1, dir2,n):
       '''回傳存在且不為空格的點
       '''
       dir1 = self.lookup_table.n_node_down( node, dir1,n)
       dir2 = self.lookup_table.n_node_down( node, dir2,n)
-      return [i for i in list(dir1+dir2) if i != None and self.board_score[i]!= 0]
+      return [i for i in list(dir1+dir2) if i != None and self.board[i]!= 0]
 
     n = 4
     tl_dr = merged_node_list(new_node,'TL','DR',n)
@@ -164,17 +211,20 @@ class board_view:
     new_point_scores = self.point_scores[:]
 
     #重新計算落點新的分數
-    new_board[new_node] = new_node_value
-    new_point_scores[new_node] = get_point_score( self.lookup_table,new_node,new_board, self.evaluation_function,new_node_value)
     
-    return board_view(new_board,new_point_scores,self.lookup_table,self.evaluation_function,recompute_pt_dict=recompute_nodes)
+    new_board[new_node] = new_node_value
+    #必須進行終止判斷
+    new_point_scores[new_node],end = get_point_score( self.lookup_table,new_node,new_board, self.evaluation_function,new_node_value)
+    
+    return board_view(new_board,new_point_scores,self.lookup_table,self.evaluation_function,recompute_pt_dict=recompute_nodes),end
 
-board_value = [85,102,103,118,119,120,134]
-board = [0 for i in range(217)]
-for i in board_value:
-  board[i] = 1
+
 
 if __name__ == "__main__":
+  board_value = [85,102,103,118,119,120,134]
+  board = [0 for i in range(217)]
+  for i in board_value:
+    board[i] = 1
   #pt_score = get_point_score(point_table,119,board,evaluation_func)
   #print(pt_score)
   #exit(0)
@@ -226,5 +276,5 @@ if __name__ == "__main__":
   while True:
     node = int(input("Node id:"))
     direction = input("direction:").upper()
-    nlist = point_table.n_node_down(node,direction,5)
+    nlist = point_table.n_node_down(node,direction,4)
     print(nlist)

@@ -100,7 +100,6 @@ class table_lookup:
 
 
     # get node one the line
-  
   def __build_n_node_down_cache(self):
     '''將 n_node_down n<=5 情況下的結果都儲存下來
     (在n<=5 的情況下執行速度可以加快約10倍)
@@ -142,6 +141,25 @@ class table_lookup:
       cur_point = next_node
     return result
 
+  def get_end_checking_table(self):
+    return self.end_checking_table
+
+  def __build_end_checking_table(self):
+    self.end_checking_table = []
+    tl_dr = [0,1,2,3,4,5,6,7,8,9,19,30,42,55,69,84,100]
+    l_r = [0,9,19,30,42,55,69,84,100,117,133,148,162,175,187,198,208]
+    tr_dl = [100,117,133,148,162,175,187,198,208,209,210,211,212,213,214,215,216]
+
+    for i in tl_dr:
+      li = [i]+[ i for i in self.n_node_down(i,"DR",16) if i != None]
+      self.end_checking_table.append(li)
+    for i in l_r:
+      li = [i]+[ i for i in self.n_node_down(i,"R",16) if i != None]
+      self.end_checking_table.append(li)
+    for i in tr_dl:
+      li = [i]+[ i for i in self.n_node_down(i,"TR",16) if i != None]
+      self.end_checking_table.append(li)
+      
   def get_node_subrange(self, node_id):
     '''回傳計算分數時三個方向上所要考慮的陣列
     使用方法:
@@ -247,6 +265,7 @@ class table_lookup:
       li.sort()
     self.__build_n_node_down_cache()
     self.__build_node_subrange()
+    self.__build_end_checking_table()
 
 
 def main():

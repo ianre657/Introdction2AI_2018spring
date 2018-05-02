@@ -5,11 +5,21 @@ import math
 
 from evaluate import board_view
 from build_table import table_lookup
+from neighbor_table import gene_surroundings, gene_n_table
+
+
+max_depth=5
+
+# 決定要尋找離戰區最近的空格
+max_neighbor_distance=2
+max_branching_factor=30
+
+n_table = gene_n_table(max_neighbor_distance)
 
 # init lookup table 
 table = table_lookup()
 
-max_depth=5
+
 
 positive_inf = math.inf
 negative_inf = -1*math.inf
@@ -35,6 +45,9 @@ def minimax(board,lookup_table, max_depth):
      mini 為對手的最優化方向
   '''
   max_depth = max_depth
+  #print(f'minimax init board:')
+  #for idx,v in enumerate(board):
+  #  print(f'idx:{idx}, v:{v}')
   bview = board_view(
     board=board,
     point_scores=None,
@@ -44,61 +57,103 @@ def minimax(board,lookup_table, max_depth):
   )
 
   def get_eva_pts(cur_bview):
-    return [ i for i in range(217) if cur_bview.board[i]==0 ]
+    res = gene_surroundings(cur_bview.board,table=n_table)
+    li = []
+    for i in range(1,max_neighbor_distance+1):
+      li+=list(res[i])
+    #li = list(res[1])+list(res[2])+list(res[3])+list(res[4])
+    #li = [i for i in range(217) if cur_bview.board[i] ==0]
+    #print(len(li) )
 
-  def _max(cur_bview, depth, alpha, beta):
+    if len(li)>max_branching_factor:
+      li = li[0:max_branching_factor]
+    
+    return li
+    #return [ i for i in range(217) if cur_bview.board[i]==0 ]
+
+  def _max(cur_bview, depth,path, alpha, beta):
     '''進入時永遠為我方執子
     '''
     if depth >= max_depth:
       #回傳我方的分數
-      return cur_bview.get_board_score[1]
+      return cur_bview.get_board_score(1),path
 
     # max_value  為目前偵測到的最大值
     max_node = None
     max_value = negative_inf
+    max_path = None
+
     
     points = get_eva_pts(cur_bview)
+    #if depth ==0:
+    #  print(f'pts:{points}')
+
     for i in points:
-      board_next = cur_bview.create_new_board(i,1)
-      val,step = _mini(board_next,depth+1,alpha,beta)
+      #if depth ==0 and i==23:
+      #  print("there")
+      board_next,game_end = cur_bview.create_new_board(i,1)
+      if game_end is True:
+        val,p = board_next.get_board_score(1), path+[i]
+      else:
+        val,p = _mini(board_next,depth+1,path+[i],alpha,beta)
+       
+        #for idx,v in enumerate(board_next.board):
+          #print(f'idx:{idx},type:{v}')
+        #print(f'move:{i}, score:{board_next.get_board_score(1)}, s[23]={board_next.point_scores[23]}')
+
+      #if depth ==0:
+      #    print(f'p:{path+[i]}, val:{val}')
       if val > max_value:
-        max_node = step
+        max_node = i
         max_value = val
+        max_path = p 
+        
 
       if max_value >= beta:
-        return max_value,max_node
+        return max_value,None
       alpha = max(alpha,max_value)
 
-  def _mini(cur_bview,depth, alpha, beta):
+    return max_value,max_path
+
+  def _mini(cur_bview,depth, path,alpha, beta):
     '''進入時永遠為對方執子
     '''
     if depth >= max_depth:
-      return cur_bview.get_board_score()
+      return cur_bview.get_board_score(1),path
 
     # min_value 為目前探測到的最小值
     min_node = None
     min_value = positive_inf
+    min_path = None
 
     points = get_eva_pts(cur_bview)
     for i in points:
-      board_next = cur_bview.create_new_board(i,2)# 對方執子
-      val, step = _max(board_next,depth+1,alpha,beta)
+      board_next,game_end = cur_bview.create_new_board(i,2)# 對方執子
+      if game_end is True:
+        val,p = board_next.get_board_score(1), path+[i]
+      else:
+        val, p = _max(board_next,depth+1,path+[i],alpha,beta)
+
       if val < min_value:
         min_value = val
-        min_node = step
+        min_node = i
+        min_path = p
 
       if min_value <= alpha:
-        return min_value, min_node
+        return min_value,None 
       beta = min(beta,min_value)
-
+    return min_value,min_path
   #執行程式
-  val,step = _max(bview,depth=0,alpha=negative_inf,beta=positive_inf)
-  print(f'next step:{step}, val:{val}')
+  val,path = _max(bview,depth=0,path=[],alpha=negative_inf,beta=positive_inf)
+  print(f'val:{val}, max path:{path}')
  
 def main():
   board = [0 for i in range(217)]
-  board[103] = 2 #對方先手
-  minimax(board=board,lookup_table=table, max_depth=3)
+  #board[103] = 2 #對方先手
+  li = [21,22,24,25]
+  for i in li:
+    board[i] = 1
+  minimax(board=board,lookup_table=table, max_depth=5)
 
 if __name__ == '__main__':
   main()
