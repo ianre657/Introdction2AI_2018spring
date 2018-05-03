@@ -28,11 +28,23 @@ negative_inf = -1*math.inf
 
 def eva_function(match_dic):
   value = {
-    2:1,
-    3:100,
-    4:10000,
-    5:1000000
+    'dead2':1,
+    'half2':2,
+    'live2':4,
+    'dead3':100,
+    'half3':200,
+    'live3':800,
+    'dead4':150,
+    'half4':700,
+    'live4':10000,
+    '5':1000000
   }
+  #value = {
+  #  2:1,
+  #  3:100,
+  #  4:10000,
+  #  5:1000000
+  #}
   result = 0
   for k,v in match_dic.items():
     result +=  value[k]* v 
@@ -201,15 +213,15 @@ def main():
   board = [0 for i in range(217)]
   #board[103] = 2 #對方先手
   
-  oppo = [24,36,37,49,16,11,38,48]
-  me   = [25,14,15,13,12,26,35,]
+  oppo = [24,35,48,23,62,47]
+  me   = [36,37,26,12,77]
   #oppo = []
   #me = []
   for i in me:
     board[i] = 1
   for i in oppo:
     board[i] = 2 
-  minimax(board=board,lookup_table=table, max_depth=5)
+  minimax(board=board,lookup_table=table, max_depth=4)
 
 if __name__ == '__main__':
   main()

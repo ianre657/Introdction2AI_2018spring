@@ -32,13 +32,20 @@ class point_score:
 
 def evaluation_func(match_dic):
   value = {
-    2:1,
-    3:100,
-    4:10000,
-    5:100000000
+    'dead2':1,
+    'half2':2,
+    'live2':4,
+    'dead3':100,
+    'half3':200,
+    'live3':800,
+    'dead4':150,
+    'half4':700,
+    'live4':10000,
+    '5':1000000
   }
   result = 0
   for k,v in match_dic.items():
+    #print(f'k:{k}, v:{v}')
     result +=  value[k]* v 
   return result
 
@@ -57,18 +64,47 @@ def get_point_score_in_direction( lookup_table,point_index, board, evaluation_fu
   if board[point_index] != point_type:
     return 0
 
-  count = { 2:0, 3:0,4:0,5:0}
+  # live 活(兩邊開放)
+  # dead 死(兩邊封閉)
+  # half 半活(一邊開放)
+  count = {
+    'dead2':0,
+    'half2':0,
+    'live2':0,
+    'dead3':0,
+    'half3':0,
+    'live3':0,
+    'dead4':0,
+    'half4':0,
+    'live4':0,
+    '5':0
+    }
+  #count = { 2:0, 3:0,4:0,5:0}
 
   def get_count(li, node_type):
+    # 利用 n_node_down 回傳None的結果來得知已經到棋盤邊界 
     count = 0
-    for i in li:
-      if board[i] == node_type:
-        count += 1
-      else:
-        return count
-    return count
-  
+    live = 0 # Live是以數字作為回傳，方便做整合用
 
+    # 數到li[3](第四個)就可以檢查遊戲是否結束
+    # 在四個沒有數完的情況下仍要確定延伸出去一格的是哪一種棋子
+    for i in range(5):
+      #最多數到第五個
+      node_id = li[i]
+      if node_id == None:#數到棋盤邊界
+        return count,live
+      if board[node_id] == node_type:
+        count +=1
+        if count >= 4:
+          return 4,1 #一定是五子連線，活跟死不重要
+      else: 
+        if board[node_id]==0:
+          live=1
+        return count,live
+    
+    print(f"不可能發生的情況:li:{li},count:{count},live:{live}")
+    exit(0)
+  
   if direction == "TL_DR":
     dir1, dir2 = "TL","DR"
   elif direction == "L_R":
@@ -78,17 +114,25 @@ def get_point_score_in_direction( lookup_table,point_index, board, evaluation_fu
   else:
     print("error, unknown direction")
     exit(1)
-  dir1_line = [i for i in lookup_table.n_node_down(point_index,dir1,4) if i != None]
-  dir2_line = [i for i in lookup_table.n_node_down(point_index,dir2,4) if i != None]
-  dir1_count = get_count(dir1_line,point_type)
-  dir2_count = get_count(dir2_line,point_type)
+  dir1_line = lookup_table.n_node_down(point_index,dir1,4)
+  dir2_line = lookup_table.n_node_down(point_index,dir2,4)
+  dir1_count, cur_live1 = get_count(dir1_line,point_type)
+  dir2_count, cur_live2 = get_count(dir2_line,point_type)
   total_count = dir1_count + dir2_count +1
+  total_live = cur_live1+cur_live2
   if total_count >= 5:
     #發現遊戲中止，沒有必要再算下去
-    count[5]+=1
+    count['5']+=1
     return evaluation_func(count),True
+  
   elif total_count <5 and total_count>=2:
-    count[total_count]+=1
+    if total_live == 0:
+      state="dead"
+    elif total_live ==1:
+      state='half'
+    elif total_live ==2:
+      state='live'
+    count[f'{state}{total_count}']+=1
   return evaluation_func(count),False
 
   #舊的計算方法
