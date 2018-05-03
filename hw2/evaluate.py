@@ -59,25 +59,55 @@ def get_point_score_in_direction( lookup_table,point_index, board, evaluation_fu
 
   count = { 2:0, 3:0,4:0,5:0}
 
-  #print(f'nd_subrange:{lookup_table.get_node_subrange(point_index)}')
-  for rng in [5,4,3,2]:
-    compute_range_list = lookup_table.get_node_subrange(point_index)[rng][direction]
-    #print(f'rng={rng}')
-    for li in compute_range_list:
-      good = True
-      for i in li:
-        if board[i] !=point_type:
-          good = False 
-          break;
-      if good is True:
-        count[len(li)] +=1
+  def get_count(li, node_type):
+    count = 0
+    for i in li:
+      if board[i] == node_type:
+        count += 1
+      else:
+        return count
+    return count
+  
 
-        #發現遊戲中止，沒有必要再算下去
-        if(rng==5):
-          return evaluation_func(count),True
-        #print(f'rng_list:{compute_range_list},len_li:{len(li)}')
-        
+  if direction == "TL_DR":
+    dir1, dir2 = "TL","DR"
+  elif direction == "L_R":
+    dir1, dir2 = "L","R"
+  elif direction == "TR_DL":
+    dir1, dir2 = "TR", "DL"
+  else:
+    print("error, unknown direction")
+    exit(1)
+  dir1_line = [i for i in lookup_table.n_node_down(point_index,dir1,4) if i != None]
+  dir2_line = [i for i in lookup_table.n_node_down(point_index,dir2,4) if i != None]
+  dir1_count = get_count(dir1_line,point_type)
+  dir2_count = get_count(dir2_line,point_type)
+  total_count = dir1_count + dir2_count +1
+  if total_count >= 5:
+    #發現遊戲中止，沒有必要再算下去
+    count[5]+=1
+    return evaluation_func(count),True
+  elif total_count <5 and total_count>=2:
+    count[total_count]+=1
   return evaluation_func(count),False
+
+  #舊的計算方法
+  #for rng in [5,4,3,2]:
+  #  compute_range_list = lookup_table.get_node_subrange(point_index)[rng][direction]
+  #  for li in compute_range_list:
+  #    good = True
+  #    for i in li:
+  #      if board[i] !=point_type:
+  #        good = False 
+  #        break;
+  #    if good is True:
+  #      count[len(li)] +=1
+  #
+  #      #發現遊戲中止，沒有必要再算下去
+  #      if(rng==5):
+  #        return evaluation_func(count),True
+  #      
+  #return evaluation_func(count),False
 
 def get_point_score( lookup_table,point_index, board, evaluation_func,point_type):
   '''回傳單點之得分數，如果該點造成遊戲終止(五子連線)則回傳tuple的第二個值會為True
@@ -91,6 +121,7 @@ def get_point_score( lookup_table,point_index, board, evaluation_func,point_type
   outcome_dic['TR_DL'],end3 = calc_dir_score("TR_DL", point_type)
   end = end or end1 or end2 or end3
   return point_score(outcome_dic, point_type),end
+
 
 class board_view:
   '''某一瞬間的棋盤，額外儲存每個格子點的分數與盤面的分數

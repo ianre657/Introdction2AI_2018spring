@@ -131,15 +131,17 @@ class table_lookup:
     if n <= 5:
       outcome = self.n_node_down_cache[point_index][direction]
       return outcome[:n]
+    else:
+      outcome = []
+      cur_point = point_index
+      #print(f'idx:{point_index}, dir:{direction}')
+      for _ in range(n):
+        next_node = self.get_id_by_relation( cur_point,direction)
+        outcome.append(next_node)
+        cur_point = next_node
 
-    result = []
-    cur_point = point_index
-    #print(f'idx:{point_index}, dir:{direction}')
-    for _ in range(n):
-      next_node = self.get_id_by_relation( cur_point,direction)
-      result.append(next_node)
-      cur_point = next_node
-    return result
+      return outcome
+
 
   def get_end_checking_table(self):
     return self.end_checking_table
