@@ -2,6 +2,7 @@ import collections
 import functools
 import math
 import os
+import time
 from random import randint
 
 # 基本設定
@@ -650,6 +651,7 @@ def minimax(board,lookup_table, max_depth):
   '''max 為我方的最優化方向,且每次進入max時皆代表為我方執子
      mini 為對手的最優化方向
   '''
+  start_time = time.time()
   max_depth = max_depth
   bview = board_view(
     board=board,
@@ -674,6 +676,8 @@ def minimax(board,lookup_table, max_depth):
     #if depth ==0:
     #  print(f'pts:{points}')
     for i in points:
+      if time.time()- start_time > 5:
+        return max_value,max_path
       board_next,game_end = cur_bview.create_new_board(i,1)
       if game_end is True:
         val,p = board_next.get_board_score(1)-board_next.get_board_score(2), path+[i]
