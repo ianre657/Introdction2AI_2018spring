@@ -786,7 +786,7 @@ class Agent:
                 return
 
             move = int(sfile.readline())
-            self.board = map(int, sfile.readline().split())
+            self.board = list(map(int, sfile.readline().split()))
             self.first_winner = int(sfile.readline())
             sfile.close()
         except:
