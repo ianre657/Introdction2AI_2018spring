@@ -13,6 +13,14 @@ class LearningData:
     def __repr__(self):
         return f'<LearningData .label:{self.label}, .data:{self.data}>'
 
+class decision_tree_node:
+    def __init__(self):
+        ...
+
+class decision_tree:
+    def __init(self):
+        ...
+
 
 def gini_impurity(dist_array: List[int]) -> float:
     '''輸入:不同label下的累積資料數
@@ -37,6 +45,12 @@ def make_histogram(d_list: List[LearningData]) -> List[int]:
     #pprint(f'hostogram:{histo}')
     return histo.values()
 
+
+def select_split_node( ) -> int:
+    def select_spilt_attribute() -> int:
+        ...
+    ...
+
 def main(fname):
     data_list = []
     with open(fname, 'r') as input_file:
@@ -48,6 +62,9 @@ def main(fname):
         #pprint(data_list, compact=True)
         out = make_histogram(data_list)
         print(f'out {out}: impurity:{gini_impurity(out)}')
+    
+        # split tree by attribute and value
+
 
 if __name__ =="__main__":
     s1='../sampledata/cross200.txt'
