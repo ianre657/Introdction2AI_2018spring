@@ -1,4 +1,5 @@
 import re
+import math
 from pprint import pprint
 from typing import List
 
@@ -17,8 +18,9 @@ class decision_tree_node:
     def __init__(self):
         ...
 
-class decision_tree:
-    def __init(self):
+class decision_node:
+    def __init__(self, ldatas:List[LearningData]):
+        self.
         ...
 
 def calc_data_list_impurity( data_list: List[LearningData]) -> float:
@@ -49,12 +51,8 @@ def calc_data_list_impurity( data_list: List[LearningData]) -> float:
     return gini_impurity(hist)
 
 
-def select_split_node( ) -> int:
-    def select_spilt_attribute() -> int:
-        ...
-    ...
 
-def split_list(data_list,attr_idx:int, split_val:float) -> (List[LearningData],List[LearningData]):
+def split_list(data_list,attr_idx:int, split_val:float, new_instance=False) -> (List[LearningData],List[LearningData]):
     '''將data串列依據 val進行分割，回傳 under, upper兩個list
     under: val 小於 attr_val 的List.
     upper: val 大於等於 attr_val 的List .
@@ -68,7 +66,9 @@ def split_list(data_list,attr_idx:int, split_val:float) -> (List[LearningData],L
             high_list.append(d)
     #pprint(f'high_list:{high_list}')
     #pprint(f'low_list:{low_list}')
-    return low_list[:], high_list[:]
+    if new_instance is True:
+        return low_list[:], high_list[:]
+    return low_list, high_list
 
 def calc_split_val(data_list,attr_idx:int ) -> List[float]:
     '''以平均數作為分割點
@@ -86,6 +86,31 @@ def calc_split_val(data_list,attr_idx:int ) -> List[float]:
     #print(f'md_pts:{mid_points}')
     return mid_points
 
+def select_split_node( data_list: List[LearningData]) -> int,int:
+    '''回傳最適合作為分割點的index以及分割後的impurity
+    '''
+    min_imp = math.inf
+    min_atr_idx = None
+    
+    min_info = { 'sp_impurity':None, 'atr_idx': None, 'val':None}
+        
+    for atr_idx in range(len(data_list[0].data)):
+        mid_vals = calc_split_val(data_list,atr_idx)
+        for val in mid_vals:
+            low, high = split_list(data_list,atr_idx,val)
+            low_imp = calc_data_list_impurity(low)
+            high_imp = calc_data_list_impurity(high)
+            split_impurity = low_imp+high_imp
+            if split_impurity < origin_impurity:
+                print(f'atr:{atr_idx}, val:{val:.3f},  split imp:{split_impurity:.3f}')
+                if split_impurity < min_info['sp_impurity']:
+                    min_info['sp_impurity'] = split_impurity
+                    min_info['atr_idx'] = atr_idx
+                    min_info['val'] = val
+    for k,v in min_info.items():
+        print(f'{k}:{v}')
+
+
 def main(fname):
     data_list = []
     with open(fname, 'r') as input_file:
@@ -102,10 +127,7 @@ def main(fname):
         origin_impurity =calc_data_list_impurity(data_list)
         print(f'origin_impurity {origin_impurity}')
 
-        #pprint(data_list,compact=True)
-        #exit(0)
-        
-        #split tree by attribut:e and value
+        min_info = { 'sp_impurity':origin_impurity, 'atr_idx': None, 'val':None}
         
         for atr_idx in range(len(data_list[0].data)):
             #print(f'atr_idx :{atr_idx}')
@@ -118,7 +140,12 @@ def main(fname):
                 sp_val = low_imp+high_imp
                 if sp_val < origin_impurity:
                     print(f'atr:{atr_idx}, val:{val:.3f},  split imp:{sp_val:.3f}')
-        
+                    if sp_val < min_info['sp_impurity']:
+                        min_info['sp_impurity'] = sp_val
+                        min_info['atr_idx'] = atr_idx
+                        min_info['val'] = val
+        for k,v in min_info.items():
+            print(f'{k}:{v}')
         #pprint(f'low list:{low}')        
 
 
