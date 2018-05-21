@@ -21,35 +21,70 @@ class decision_tree:
     def __init(self):
         ...
 
+def calc_data_list_impurity( data_list: List[LearningData]) -> float:
+    def gini_impurity(dist_array: List[int]) -> float:
+        '''輸入:不同label下的累積資料數
+        '''
+        total_elements = sum(dist_array)
+        result = 1.0
+        for num in dist_array:
+            result -= (num/total_elements)**2 
+        return result
 
-def gini_impurity(dist_array: List[int]) -> float:
-    '''輸入:不同label下的累積資料數
-    '''
-    total_elements = sum(dist_array)
-    result = 1.0
-    for num in dist_array:
-        result -= (num/total_elements)**2 
-    return result
+    def make_histogram(d_list: List[LearningData]) -> List[int]:
+        '''根據現有的Learning Data建立分布統計
+        '''
+        histo = dict()
 
-def make_histogram(d_list: List[LearningData]) -> List[int]:
-    '''根據現有的Learning Data建立分布統計
-    '''
-    histo = dict()
+        for i in d_list:
+            if histo.get(i.label) is None:
+                histo[i.label] = 1
+            else:
+                histo[i.label] += 1
+        
+        #pprint(f'hostogram:{histo}')
+        return histo.values()
 
-    for i in d_list:
-        if histo.get(i.label) is None:
-            histo[i.label] = 1
-        else:
-            histo[i.label] += 1
-    
-    #pprint(f'hostogram:{histo}')
-    return histo.values()
+    hist = make_histogram(data_list)
+    return gini_impurity(hist)
 
 
 def select_split_node( ) -> int:
     def select_spilt_attribute() -> int:
         ...
     ...
+
+def split_list(data_list,attr_idx:int, split_val:float) -> (List[LearningData],List[LearningData]):
+    '''將data串列依據 val進行分割，回傳 under, upper兩個list
+    under: val 小於 attr_val 的List.
+    upper: val 大於等於 attr_val 的List .
+    '''
+    low_list = []
+    high_list = []
+    for d in data_list:
+        if d.data[attr_idx] < split_val:
+            low_list.append(d)
+        else:
+            high_list.append(d)
+    #pprint(f'high_list:{high_list}')
+    #pprint(f'low_list:{low_list}')
+    return low_list[:], high_list[:]
+
+def calc_split_val(data_list,attr_idx:int ) -> List[float]:
+    '''以平均數作為分割點
+    '''
+    values = [d.data[attr_idx] for d in data_list]
+    #拿取不重複的點
+    values = list(set(values))
+    values.sort()
+
+
+    mid_points = []
+    for i in range(len(values)-1):
+        mid_points.append( (values[i] + values[i+1])/2 )
+    #print(f'values:{values}')
+    #print(f'md_pts:{mid_points}')
+    return mid_points
 
 def main(fname):
     data_list = []
@@ -60,16 +95,37 @@ def main(fname):
                 learn_data = LearningData([i for i in re.split('\s|,', line) if i !=''])
                 data_list.append(learn_data)
         #pprint(data_list, compact=True)
-        out = make_histogram(data_list)
-        print(f'out {out}: impurity:{gini_impurity(out)}')
-    
-        # split tree by attribute and value
+        imp = calc_data_list_impurity(data_list)
+        #print(f'out {out}: impurity:{imp}')
+
+
+        origin_impurity =calc_data_list_impurity(data_list)
+        print(f'origin_impurity {origin_impurity}')
+
+        #pprint(data_list,compact=True)
+        #exit(0)
+        
+        #split tree by attribut:e and value
+        
+        for atr_idx in range(len(data_list[0].data)):
+            #print(f'atr_idx :{atr_idx}')
+            mid_vals = calc_split_val(data_list,atr_idx)
+            #print(f'mds:{mid_vals}')
+            for val in mid_vals:
+                low, high = split_list(data_list,atr_idx,val)
+                low_imp = calc_data_list_impurity(low)
+                high_imp = calc_data_list_impurity(high)
+                sp_val = low_imp+high_imp
+                if sp_val < origin_impurity:
+                    print(f'atr:{atr_idx}, val:{val:.3f},  split imp:{sp_val:.3f}')
+        
+        #pprint(f'low list:{low}')        
 
 
 if __name__ =="__main__":
     s1='../sampledata/cross200.txt'
     s2 = '../sampledata/iris.txt'
     s3 = '../sampledata/optical-digits.txt'
-    main(s3)
+    main(s2)
     #im = gini_impurity([30,10])
     #print(f'impurity:{im}')
