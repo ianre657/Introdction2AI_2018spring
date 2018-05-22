@@ -1,7 +1,7 @@
 import re
 import math
 from pprint import pprint
-from typing import List, Dict
+from typing import List, Dict, Union
 
 class LearningData:
     '''儲存單一筆學習用的資料
@@ -70,7 +70,7 @@ def get_mids(vals: List[float]) -> List[float]:
         mid_points.append( (values[i] + values[i+1])/2 )
     return mid_points
 
-def best_split_node( data_list: List[LearningData], ignore_attrs=List[int]) -> Dict:
+def best_split_node( data_list: List[LearningData], ignore_attrs:List[int]=[]) -> Union[Dict,None]:
     '''回傳最適合作為分割點的index以及分割後的impurity
     '''
     min_impurity = math.inf
