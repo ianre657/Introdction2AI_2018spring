@@ -6,9 +6,11 @@ from typing import List, Dict, Union
 class LearningData:
     '''儲存單一筆學習用的資料
     '''
-    def __init__(self,in_arr):
+    def __init__(self,in_arr, idx=None):
         '''輸入陣列的最後一個元素為label
         '''
+        if idx!=None:
+            self.idx = idx 
         self.data = [float(i) for i in in_arr[0:-1]]
         self.label = in_arr[-1]
     def __repr__(self):
@@ -102,9 +104,9 @@ def best_split_node( data_list: List[LearningData], ignore_attrs:List[int]=[]) -
         return None
 
 class decision_node:
-    def __init__(self, datas:List[LearningData], depth, ignore_attrs=None):
+    def __init__(self, datas:List[LearningData], ignore_attrs:List[int]=[], init_depth=0):
         self.impurity = calc_data_list_impurity(datas)
-        self.depth = depth
+        self.depth = init_depth
         self.data_list = datas
         self.ignore_attrs = ignore_attrs
 
@@ -112,7 +114,7 @@ class decision_node:
         self.split_idx = None
         self.split_val = None
         self.leftNode = None # 小於等於
-        self.rightNode = None # 大於 
+        self.rightNode = None # 大於
 
     def build_tree(self, max_depth):
         if self.depth > max_depth:
@@ -120,8 +122,9 @@ class decision_node:
             return
 
         result = best_split_node(self.data_list,ignore_attrs=self.ignore_attrs)
+        #print(f'tree node imp:{self.impurity}, split result:{result}')
         #判斷是否要繼續往下建立節點
-        if result!=None and result['impurity'] >= self.impurity:
+        if result==None or result['impurity'] >= self.impurity:
             self.isLeaf = True
             return
         self.split_idx = result['attr_idx']
@@ -131,19 +134,54 @@ class decision_node:
                 attr_idx=self.split_idx,
                 split_val=self.split_val
         )
-        self.leftNode  = decision_node( datas=left_list,  depth=self.depth+1,ignore_attrs=self.ignore_attrs)
-        self.rightNode = decision_node( datas=right_list, depth=self.depth+1,ignore_attrs=self.ignore_attrs)
+        self.leftNode  = decision_node( datas=left_list,  ignore_attrs=self.ignore_attrs, init_depth=self.depth+1)
+        self.rightNode = decision_node( datas=right_list, ignore_attrs=self.ignore_attrs, init_depth=self.depth+1)
         self.leftNode.build_tree(max_depth=max_depth)
         self.rightNode.build_tree(max_depth=max_depth)
+
+
+    def show_tree(self, indent=""):
+        if self.isLeaf is True:
+            print(indent+"leaf node")
+            for idx,d in enumerate(self.data_list):
+                print(f'{indent}idx:{idx+1}, label:{d.label}. origin_idx={d.idx}')
+            print()
+        else:
+            self.leftNode.show_tree(indent=indent+'L-> ')
+            self.rightNode.show_tree(indent=indent+'R-> ')
+
+        
+    def classify(self, input_data:LearningData) -> Union[str, float]:
+        cur_node = self
+        print('in!')
+        if cur_node.isLeaf is True:
+            return None
+
+        # 直接到最最終端點
+        while cur_node.isLeaf is not True:
+            cur_idx = cur_node.split_idx
+            cur_val = cur_node.split_val
+            d = input_data
+            if d.data[cur_idx] <= cur_val:
+                cur_node = cur_node.leftNode
+            else:
+                cur_node = cur_node.rightNode
+        for idx,d in enumerate(cur_node.data_list):
+            print(f'leaf idx:{idx}, label:{d.label}, data_idx:{d.idx}')
+
 
 def main(fname):
     data_list = []
     with open(fname, 'r') as input_file:
+        i = 0
         for line in input_file.readlines():
             line = line.strip()
             if line!='':
-                learn_data = LearningData([i for i in re.split('\s|,', line) if i !=''])
+                learn_data = LearningData([i for i in re.split('\s|,', line) if i !=''],idx=i)
                 data_list.append(learn_data)
+                i += 1
+        for idx,d in enumerate(data_list):
+            print(f'idx:{idx}, label:{d.label}')
         #pprint(data_list, compact=True)
         imp = calc_data_list_impurity(data_list)
         #print(f'out {out}: impurity:{imp}')
@@ -153,12 +191,21 @@ def main(fname):
         print(f'origin_impurity {origin_impurity}')
 
         result = best_split_node(data_list)
-        print(f'result:{result}')
+        #print(f'result:{result}')
+
+        TreeRoot = decision_node(data_list)
+        TreeRoot.build_tree(20)
+
+        print(f'Show tree')
+        TreeRoot.show_tree()
+        #print(f'tree node is leaf:{TreeRoot.isLeaf}')
+        TreeRoot.classify( data_list[97])
+        #print('build tree successfully.')
 
 if __name__ =="__main__":
     s1='../sampledata/cross200.txt'
     s2 = '../sampledata/iris.txt'
     s3 = '../sampledata/optical-digits.txt'
-    main(s2)
+    main(s3)
     #im = gini_impurity([30,10])
     #print(f'impurity:{im}')
