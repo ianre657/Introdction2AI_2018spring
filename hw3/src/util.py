@@ -1,7 +1,7 @@
 import re
 import math
 from pprint import pprint
-from typing import List
+from typing import List, Dict
 
 class LearningData:
     '''儲存單一筆學習用的資料
@@ -13,15 +13,6 @@ class LearningData:
         self.label = in_arr[-1]
     def __repr__(self):
         return f'<LearningData .label:{self.label}, .data:{self.data}>'
-
-class decision_tree_node:
-    def __init__(self):
-        ...
-
-class decision_node:
-    def __init__(self, ldatas:List[LearningData]):
-        self.
-        ...
 
 def calc_data_list_impurity( data_list: List[LearningData]) -> float:
     def gini_impurity(dist_array: List[int]) -> float:
@@ -50,8 +41,6 @@ def calc_data_list_impurity( data_list: List[LearningData]) -> float:
     hist = make_histogram(data_list)
     return gini_impurity(hist)
 
-
-
 def split_list(data_list,attr_idx:int, split_val:float, new_instance=False) -> (List[LearningData],List[LearningData]):
     '''將data串列依據 val進行分割，回傳 under, upper兩個list
     under: val 小於 attr_val 的List.
@@ -70,46 +59,82 @@ def split_list(data_list,attr_idx:int, split_val:float, new_instance=False) -> (
         return low_list[:], high_list[:]
     return low_list, high_list
 
-def calc_split_val(data_list,attr_idx:int ) -> List[float]:
-    '''以平均數作為分割點
+def get_mids(vals: List[float]) -> List[float]:
+    '''回傳陣列中不重複數值的平均點，以升冪排序
     '''
-    values = [d.data[attr_idx] for d in data_list]
-    #拿取不重複的點
-    values = list(set(values))
+    values = list(set(vals))
     values.sort()
-
 
     mid_points = []
     for i in range(len(values)-1):
         mid_points.append( (values[i] + values[i+1])/2 )
-    #print(f'values:{values}')
-    #print(f'md_pts:{mid_points}')
     return mid_points
 
-def select_split_node( data_list: List[LearningData]) -> int,int:
+def best_split_node( data_list: List[LearningData], ignore_attrs=List[int]) -> Dict:
     '''回傳最適合作為分割點的index以及分割後的impurity
     '''
-    min_imp = math.inf
+    min_impurity = math.inf
     min_atr_idx = None
+    min_split_val = None
+    find = False
+
+    ignore_idx_set = set(ignore_attrs)
     
-    min_info = { 'sp_impurity':None, 'atr_idx': None, 'val':None}
-        
     for atr_idx in range(len(data_list[0].data)):
-        mid_vals = calc_split_val(data_list,atr_idx)
+        if atr_idx in ignore_attrs:
+            continue
+        atr_vals = [d.data[atr_idx] for d in data_list]
+        mid_vals = get_mids(atr_vals)
         for val in mid_vals:
             low, high = split_list(data_list,atr_idx,val)
             low_imp = calc_data_list_impurity(low)
             high_imp = calc_data_list_impurity(high)
             split_impurity = low_imp+high_imp
-            if split_impurity < origin_impurity:
-                print(f'atr:{atr_idx}, val:{val:.3f},  split imp:{split_impurity:.3f}')
-                if split_impurity < min_info['sp_impurity']:
-                    min_info['sp_impurity'] = split_impurity
-                    min_info['atr_idx'] = atr_idx
-                    min_info['val'] = val
-    for k,v in min_info.items():
-        print(f'{k}:{v}')
+            if split_impurity < min_impurity:
+                #print(f'atr:{atr_idx}, val:{val:.3f},  split imp:{split_impurity:.3f}')
+                min_impurity = split_impurity
+                min_atr_idx = atr_idx
+                min_split_val = val
+                find=True
+    if find is True:
+        return {'attr_idx':min_atr_idx, 'impurity':min_impurity, 'split_value':min_split_val }
+    else:
+        return None
 
+class decision_node:
+    def __init__(self, datas:List[LearningData], depth, ignore_attrs=None):
+        self.impurity = calc_data_list_impurity(datas)
+        self.depth = depth
+        self.data_list = datas
+        self.ignore_attrs = ignore_attrs
+
+        self.isLeaf = False
+        self.split_idx = None
+        self.split_val = None
+        self.leftNode = None # 小於等於
+        self.rightNode = None # 大於 
+
+    def build_tree(self, max_depth):
+        if self.depth > max_depth:
+            self.isLeaf = True
+            return
+
+        result = best_split_node(self.data_list,ignore_attrs=self.ignore_attrs)
+        #判斷是否要繼續往下建立節點
+        if result!=None and result['impurity'] >= self.impurity:
+            self.isLeaf = True
+            return
+        self.split_idx = result['attr_idx']
+        self.split_val = result['split_value']
+        left_list, right_list = split_list(
+                data_list=self.data_list,
+                attr_idx=self.split_idx,
+                split_val=self.split_val
+        )
+        self.leftNode  = decision_node( datas=left_list,  depth=self.depth+1,ignore_attrs=self.ignore_attrs)
+        self.rightNode = decision_node( datas=right_list, depth=self.depth+1,ignore_attrs=self.ignore_attrs)
+        self.leftNode.build_tree(max_depth=max_depth)
+        self.rightNode.build_tree(max_depth=max_depth)
 
 def main(fname):
     data_list = []
@@ -127,27 +152,8 @@ def main(fname):
         origin_impurity =calc_data_list_impurity(data_list)
         print(f'origin_impurity {origin_impurity}')
 
-        min_info = { 'sp_impurity':origin_impurity, 'atr_idx': None, 'val':None}
-        
-        for atr_idx in range(len(data_list[0].data)):
-            #print(f'atr_idx :{atr_idx}')
-            mid_vals = calc_split_val(data_list,atr_idx)
-            #print(f'mds:{mid_vals}')
-            for val in mid_vals:
-                low, high = split_list(data_list,atr_idx,val)
-                low_imp = calc_data_list_impurity(low)
-                high_imp = calc_data_list_impurity(high)
-                sp_val = low_imp+high_imp
-                if sp_val < origin_impurity:
-                    print(f'atr:{atr_idx}, val:{val:.3f},  split imp:{sp_val:.3f}')
-                    if sp_val < min_info['sp_impurity']:
-                        min_info['sp_impurity'] = sp_val
-                        min_info['atr_idx'] = atr_idx
-                        min_info['val'] = val
-        for k,v in min_info.items():
-            print(f'{k}:{v}')
-        #pprint(f'low list:{low}')        
-
+        result = best_split_node(data_list)
+        print(f'result:{result}')
 
 if __name__ =="__main__":
     s1='../sampledata/cross200.txt'
