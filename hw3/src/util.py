@@ -3,6 +3,8 @@ import math
 from pprint import pprint
 from typing import List, Dict, Union
 
+
+
 class LearningData:
     '''儲存單一筆學習用的資料
     '''
@@ -16,6 +18,10 @@ class LearningData:
     def __repr__(self):
         return f'<LearningData .label:{self.label}, .data:{self.data}>'
 
+
+def chunkify(lst:List,n) -> List[List]:
+    return [ lst[i::n] for i in range(n) ]
+
 def calc_data_list_impurity( data_list: List[LearningData]) -> float:
     def gini_impurity(dist_array: List[int]) -> float:
         '''輸入:不同label下的累積資料數
@@ -25,7 +31,6 @@ def calc_data_list_impurity( data_list: List[LearningData]) -> float:
         for num in dist_array:
             result -= (num/total_elements)**2 
         return result
-
     def make_histogram(d_list: List[LearningData]) -> List[int]:
         '''根據現有的Learning Data建立分布統計
         '''
@@ -139,7 +144,6 @@ class decision_node:
         self.leftNode.build_tree(max_depth=max_depth)
         self.rightNode.build_tree(max_depth=max_depth)
 
-
     def show_tree(self, indent=""):
         if self.isLeaf is True:
             print(indent+"leaf node")
@@ -149,11 +153,9 @@ class decision_node:
         else:
             self.leftNode.show_tree(indent=indent+'L-> ')
             self.rightNode.show_tree(indent=indent+'R-> ')
-
-        
+      
     def classify(self, input_data:LearningData) -> Union[str, float]:
         cur_node = self
-        print('in!')
         if cur_node.isLeaf is True:
             return None
 
@@ -166,9 +168,92 @@ class decision_node:
                 cur_node = cur_node.leftNode
             else:
                 cur_node = cur_node.rightNode
-        for idx,d in enumerate(cur_node.data_list):
-            print(f'leaf idx:{idx}, label:{d.label}, data_idx:{d.idx}')
+        
+        histo = dict()
+        for d in cur_node.data_list:
+            if histo.get(d.label) is None:
+                histo[d.label] = 1
+            else:
+                histo[d.label] += 1
+        
+        #print(f'hostogram:{histo}')
 
+        # 使用多數決預測資料種類
+        max_label = None
+        max_count = -1
+        for k,v in histo.items():
+            if v > max_count:
+                max_label = k
+                max_count = v
+        #print(f'predict : {max_label}')
+      
+        # 顯示底層資料夾
+        #for idx,d in enumerate(cur_node.data_list):
+        #    print(f'leaf idx:{idx}, label:{d.label}, data_idx:{d.idx}')
+        return max_label
+
+class decision_trees:
+    '''包含眾多 decision root nodes
+        可以進行投票來回傳結果
+    '''
+    def __init__(self, tree_list ):
+        self.num = len(tree_list)
+        self.trees = tree_list
+
+    def classify(self, input_data:LearningData,show=False) -> Union[str,float]:
+        histo = dict()
+        for t in self.trees:
+            label = t.classify(input_data )
+            if histo.get(label) is None:
+                histo[label] = 1
+            else:
+                histo[label] += 1
+
+        # 使用多數決預測資料種類
+        max_label = None
+        max_count = -1
+        for k,v in histo.items():
+            if v > max_count and k != None:
+                max_label = k
+                max_count = v
+        if show is True:
+            print(histo)
+        return max_label
+
+def train_by_data(data_chunks: List[List[LearningData]],max_tree_depth=20 ) -> decision_trees:
+    '''回傳訓練好的樹群
+    '''
+    num_attributes = len(data_chunks[0][0].data)
+
+    def get_ignore_attribute_list():
+        rng = num_attributes
+
+         # 限制測驗數量
+        if rng > 5:
+            rng = 5
+        return range(rng)
+ 
+    traning_data = data_chunks
+
+    # tree bagging
+    Primary_dtree = None #不同訓練資料產生出的決策樹
+    diff_data_dtrees = []
+    ig_attrs = get_ignore_attribute_list()
+    for data in traning_data:
+        #attribute bagging 
+        diff_attr_dnodes = [] # 忽略不同參數而產生出的決策樹List
+        for i in ig_attrs:
+            ignore_attr_idx = [i]
+            dnode = decision_node(data,ignore_attrs=ignore_attr_idx)
+            dnode.build_tree(max_tree_depth)
+            diff_attr_dnodes.append(dnode)
+
+        sub_dtree = decision_trees(diff_attr_dnodes)
+        diff_data_dtrees.append( sub_dtree )
+
+    Primary_dtree = decision_trees(diff_data_dtrees)
+
+    return Primary_dtree
 
 def main(fname):
     data_list = []
@@ -180,32 +265,55 @@ def main(fname):
                 learn_data = LearningData([i for i in re.split('\s|,', line) if i !=''],idx=i)
                 data_list.append(learn_data)
                 i += 1
-        for idx,d in enumerate(data_list):
-            print(f'idx:{idx}, label:{d.label}')
-        #pprint(data_list, compact=True)
-        imp = calc_data_list_impurity(data_list)
-        #print(f'out {out}: impurity:{imp}')
-
+        
 
         origin_impurity =calc_data_list_impurity(data_list)
         print(f'origin_impurity {origin_impurity}')
 
-        result = best_split_node(data_list)
-        #print(f'result:{result}')
 
-        TreeRoot = decision_node(data_list)
-        TreeRoot.build_tree(20)
+        #TreeRoot = decision_node(data_list)
+        #TreeRoot.build_tree(20)
 
-        print(f'Show tree')
-        TreeRoot.show_tree()
+        #print(f'Show tree')
+        #TreeRoot.show_tree()
+        
         #print(f'tree node is leaf:{TreeRoot.isLeaf}')
-        TreeRoot.classify( data_list[97])
+        #TreeRoot.classify( data_list[6])
         #print('build tree successfully.')
+
+        data_chunks = chunkify(data_list, 5)
+        validation_data = data_chunks[0]
+        training_data = data_chunks[1:]
+
+        primary_tree = train_by_data(training_data)
+
+            
+        #for tree in primary_tree.trees:
+        #    result = tree.classify( validation_data[0] )
+        #    print(f" sub tree result: {result}")
+        #    if result is None:
+        #        print(f'show detailed info {type(tree)}')
+        #        result = tree.classify( validation_data[0],show=True )
+        #    #print(f" sub tree result: {result}")
+        #
+
+        good = 0
+        bad = 0 
+        for vdata in validation_data:
+            result = primary_tree.classify(vdata)
+            if result == vdata.label:
+                good +=1
+            else:
+                bad +=1
+        print(f'validation :{good/(good+bad)*100}%')
+
+        #print(f" Primary  tree result: {result}")
+
 
 if __name__ =="__main__":
     s1='../sampledata/cross200.txt'
     s2 = '../sampledata/iris.txt'
     s3 = '../sampledata/optical-digits.txt'
-    main(s3)
+    main(s1)
     #im = gini_impurity([30,10])
     #print(f'impurity:{im}')
