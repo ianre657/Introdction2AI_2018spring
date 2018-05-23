@@ -1,9 +1,17 @@
 import re
 import math
+import random
+import multiprocessing as mp
+import time
 from pprint import pprint
 from typing import List, Dict, Union
 
 
+DUPLICATE_VARIFIED_TIMES =5
+NUM_DATA_CHUNK= 51
+
+NUM_DATA_CHUNK_FOR_TRAINING= 25
+NUM_ATTR_BAGGING_TIMES= 5
 
 class LearningData:
     '''儲存單一筆學習用的資料
@@ -17,7 +25,6 @@ class LearningData:
         self.label = in_arr[-1]
     def __repr__(self):
         return f'<LearningData .label:{self.label}, .data:{self.data}>'
-
 
 def chunkify(lst:List,n) -> List[List]:
     return [ lst[i::n] for i in range(n) ]
@@ -84,7 +91,7 @@ def best_split_node( data_list: List[LearningData], ignore_attrs:List[int]=[]) -
     min_atr_idx = None
     min_split_val = None
     find = False
-
+    #print(f'ignore:{ignore_attrs}')
     ignore_idx_set = set(ignore_attrs)
     
     for atr_idx in range(len(data_list[0].data)):
@@ -112,7 +119,7 @@ class decision_node:
     def __init__(self, datas:List[LearningData], ignore_attrs:List[int]=[], init_depth=0):
         self.impurity = calc_data_list_impurity(datas)
         self.depth = init_depth
-        self.data_list = datas
+        self.data_list = datas[:]
         self.ignore_attrs = ignore_attrs
 
         self.isLeaf = False
@@ -137,7 +144,8 @@ class decision_node:
         left_list, right_list = split_list(
                 data_list=self.data_list,
                 attr_idx=self.split_idx,
-                split_val=self.split_val
+                split_val=self.split_val,
+                new_instance=True
         )
         self.leftNode  = decision_node( datas=left_list,  ignore_attrs=self.ignore_attrs, init_depth=self.depth+1)
         self.rightNode = decision_node( datas=right_list, ignore_attrs=self.ignore_attrs, init_depth=self.depth+1)
@@ -226,12 +234,13 @@ def train_by_data(data_chunks: List[List[LearningData]],max_tree_depth=20 ) -> d
     num_attributes = len(data_chunks[0][0].data)
 
     def get_ignore_attribute_list():
-        rng = num_attributes
+        num_items = NUM_ATTR_BAGGING_TIMES
+        num_attr = num_attributes
+        num_ignore = int(num_attr**0.5)
+       
+        lg_list = [ random.sample( [i for i in range(num_attr)] ,num_ignore) for _ in range(num_items) ]
 
-         # 限制測驗數量
-        if rng > 5:
-            rng = 5
-        return range(rng)
+        return lg_list
  
     traning_data = data_chunks
 
@@ -239,11 +248,24 @@ def train_by_data(data_chunks: List[List[LearningData]],max_tree_depth=20 ) -> d
     Primary_dtree = None #不同訓練資料產生出的決策樹
     diff_data_dtrees = []
     ig_attrs = get_ignore_attribute_list()
-    for data in traning_data:
+    
+    
+    # mp
+    #num_cpu =  mp.cpu_count()
+    #def collect_mp_result( val_tuple):
+    #    pass
+
+    #def get_mp_failed(msg):
+    #    print(f'failed :{msg}')
+
+
+    for idx,data in enumerate(traning_data):
+        print(f'training tree: {idx}/{len(traning_data)}')
         #attribute bagging 
         diff_attr_dnodes = [] # 忽略不同參數而產生出的決策樹List
-        for i in ig_attrs:
-            ignore_attr_idx = [i]
+        for idx2,ig_list in enumerate(ig_attrs):
+            print(f' bagging :{idx2}/{len(ig_attrs)}')
+            ignore_attr_idx = ig_list
             dnode = decision_node(data,ignore_attrs=ignore_attr_idx)
             dnode.build_tree(max_tree_depth)
             diff_attr_dnodes.append(dnode)
@@ -256,6 +278,7 @@ def train_by_data(data_chunks: List[List[LearningData]],max_tree_depth=20 ) -> d
     return Primary_dtree
 
 def main(fname):
+    
     data_list = []
     with open(fname, 'r') as input_file:
         i = 0
@@ -265,47 +288,48 @@ def main(fname):
                 learn_data = LearningData([i for i in re.split('\s|,', line) if i !=''],idx=i)
                 data_list.append(learn_data)
                 i += 1
-        
+
+        random.shuffle(data_list)
 
         origin_impurity =calc_data_list_impurity(data_list)
         print(f'origin_impurity {origin_impurity}')
 
 
-        #TreeRoot = decision_node(data_list)
-        #TreeRoot.build_tree(20)
+        num_chunk = NUM_DATA_CHUNK
+        num_training_chunk = NUM_DATA_CHUNK_FOR_TRAINING
 
-        #print(f'Show tree')
-        #TreeRoot.show_tree()
-        
-        #print(f'tree node is leaf:{TreeRoot.isLeaf}')
-        #TreeRoot.classify( data_list[6])
-        #print('build tree successfully.')
-
-        data_chunks = chunkify(data_list, 5)
+        data_chunks = chunkify(data_list, num_chunk)
         validation_data = data_chunks[0]
-        training_data = data_chunks[1:]
+        
+        #training_data = data_chunks[1:num_training_chunk+1]
 
-        primary_tree = train_by_data(training_data)
 
-            
-        #for tree in primary_tree.trees:
-        #    result = tree.classify( validation_data[0] )
-        #    print(f" sub tree result: {result}")
-        #    if result is None:
-        #        print(f'show detailed info {type(tree)}')
-        #        result = tree.classify( validation_data[0],show=True )
-        #    #print(f" sub tree result: {result}")
-        #
+        validate_outcomes = []
+        for _ in range(DUPLICATE_VARIFIED_TIMES):
+            dchunk = data_chunks[1:]
+            random.Random(time.time()).shuffle(dchunk)
+            training_data = dchunk[:num_training_chunk]
 
-        good = 0
-        bad = 0 
-        for vdata in validation_data:
-            result = primary_tree.classify(vdata)
-            if result == vdata.label:
-                good +=1
-            else:
-                bad +=1
-        print(f'validation :{good/(good+bad)*100}%')
+            primary_tree = train_by_data(training_data)
+            good = 0
+            bad = 0 
+            for vdata in validation_data:
+                result = primary_tree.classify(vdata)
+                if result == vdata.label:
+                    good +=1
+                else:
+                    bad +=1
+            vrate = good/(good+bad)*100
+            vrate = round(vrate,2)
+            print(f'validation :{vrate}%')
+            validate_outcomes.append(vrate)
+        t = NUM_DATA_CHUNK_FOR_TRAINING
+        b = NUM_ATTR_BAGGING_TIMES
+        print( f't:{t}, b:{b}')
+        print( f'vrates:{validate_outcomes}')
+        oc = validate_outcomes
+        oc = round(sum(oc)/len(oc),2)
+        print( f'avg vrate:{ oc }' )
 
         #print(f" Primary  tree result: {result}")
 
@@ -314,6 +338,6 @@ if __name__ =="__main__":
     s1='../sampledata/cross200.txt'
     s2 = '../sampledata/iris.txt'
     s3 = '../sampledata/optical-digits.txt'
-    main(s1)
+    main(s3)
     #im = gini_impurity([30,10])
     #print(f'impurity:{im}')
