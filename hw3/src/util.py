@@ -7,11 +7,11 @@ from pprint import pprint
 from typing import List, Dict, Union
 
 
-DUPLICATE_VARIFIED_TIMES =5
-NUM_DATA_CHUNK= 51
+DUPLICATE_VARIFIED_TIMES =10
+NUM_DATA_CHUNK=  101
 
-NUM_DATA_CHUNK_FOR_TRAINING= 25
-NUM_ATTR_BAGGING_TIMES= 5
+NUM_DATA_CHUNK_FOR_TRAINING= 100
+NUM_ATTR_BAGGING_TIMES= 10
 
 class LearningData:
     '''儲存單一筆學習用的資料
@@ -228,6 +228,18 @@ class decision_trees:
             print(histo)
         return max_label
 
+def calculate_sub_dtree(data,ig_attrs,max_tree_depth):
+    diff_attr_dnodes = [] # 忽略不同參數而產生出的決策樹List
+    for idx,ig_list in enumerate(ig_attrs):
+        #print(f' bagging :{idx}/{len(ig_attrs)}')
+        ignore_attr_idx = ig_list
+        dnode = decision_node(data,ignore_attrs=ignore_attr_idx)
+        dnode.build_tree(max_tree_depth)
+        diff_attr_dnodes.append(dnode)
+
+    sub_dtree = decision_trees(diff_attr_dnodes)
+    return sub_dtree
+
 def train_by_data(data_chunks: List[List[LearningData]],max_tree_depth=20 ) -> decision_trees:
     '''回傳訓練好的樹群
     '''
@@ -251,27 +263,24 @@ def train_by_data(data_chunks: List[List[LearningData]],max_tree_depth=20 ) -> d
     
     
     # mp
-    #num_cpu =  mp.cpu_count()
-    #def collect_mp_result( val_tuple):
-    #    pass
+    def collect_mp_result( sub_dtree):
+        diff_data_dtrees.append(sub_dtree)
 
-    #def get_mp_failed(msg):
-    #    print(f'failed :{msg}')
+    def get_mp_failed(msg):
+        print(f'failed :{msg}')
+    
 
 
+    pool = mp.Pool(processes=mp.cpu_count())
     for idx,data in enumerate(traning_data):
-        print(f'training tree: {idx}/{len(traning_data)}')
-        #attribute bagging 
-        diff_attr_dnodes = [] # 忽略不同參數而產生出的決策樹List
-        for idx2,ig_list in enumerate(ig_attrs):
-            print(f' bagging :{idx2}/{len(ig_attrs)}')
-            ignore_attr_idx = ig_list
-            dnode = decision_node(data,ignore_attrs=ignore_attr_idx)
-            dnode.build_tree(max_tree_depth)
-            diff_attr_dnodes.append(dnode)
-
-        sub_dtree = decision_trees(diff_attr_dnodes)
-        diff_data_dtrees.append( sub_dtree )
+        pool.apply_async(
+            calculate_sub_dtree,
+            args=(data,ig_attrs,max_tree_depth),
+            callback=collect_mp_result,
+            error_callback=get_mp_failed
+        )
+    pool.close()
+    pool.join()
 
     Primary_dtree = decision_trees(diff_data_dtrees)
 
