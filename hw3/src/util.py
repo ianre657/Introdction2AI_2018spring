@@ -11,7 +11,7 @@ from typing import List, Dict, Union
 
 
 # 重新 train資料的次數，多次一點比較可以代表參數的效果如何
-DUPLICATE_TRAINING_TIMES = 20
+DUPLICATE_TRAINING_TIMES = 30
 
 # 越多次驗證測資的測定結果越可靠
 VALIDATE_TIMES = 400
@@ -484,7 +484,7 @@ if __name__ =="__main__":
     s2 = '../sampledata/iris.txt'
     s3 = '../sampledata/optical-digits.txt'
 
-    sample_input = s2
+    sample_input = s1
 
 
     # best_parameter
@@ -500,7 +500,7 @@ if __name__ =="__main__":
         FOREST_SIZE = 30
         
     elif sample_input == s1:
-        VALIDATE_DATA_SIZE = 40
+        VALIDATE_DATA_SIZE = 20
         TRAINING_DATA_SIZE = 5
         NUM_ATTR_BAGGING_TIMES = 5
         FOREST_SIZE = 40

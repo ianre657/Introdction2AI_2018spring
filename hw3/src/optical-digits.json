@@ -1,0 +1,13 @@
+[
+{"avg_rate": 90.26, "forest_size": 150, "bag_size": 3, "validate_pool_size": 100, "model_training_size": 40},
+{"avg_rate": 87.21, "forest_size": 125, "bag_size": 3, "validate_pool_size": 100, "model_training_size": 40},
+{"avg_rate": 84.22, "forest_size": 150, "bag_size": 3, "validate_pool_size": 100, "model_training_size": 50},
+{"avg_rate": 82.96, "forest_size": 75, "bag_size": 3, "validate_pool_size": 100, "model_training_size": 40},
+{"avg_rate": 82.36, "forest_size": 100, "bag_size": 3, "validate_pool_size": 100, "model_training_size": 40},
+{"avg_rate": 82.27, "forest_size": 125, "bag_size": 3, "validate_pool_size": 100, "model_training_size": 50},
+{"avg_rate": 81.92, "forest_size": 100, "bag_size": 3, "validate_pool_size": 100, "model_training_size": 50},
+{"avg_rate": 81.55, "forest_size": 75, "bag_size": 3, "validate_pool_size": 100, "model_training_size": 50},
+{"avg_rate": 80.73, "forest_size": 125, "bag_size": 3, "validate_pool_size": 100, "model_training_size": 60},
+{"avg_rate": 80.38, "forest_size": 100, "bag_size": 3, "validate_pool_size": 100, "model_training_size": 60},
+{"avg_rate": 79.91, "forest_size": 75, "bag_size": 3, "validate_pool_size": 100, "model_training_size": 60}
+]
