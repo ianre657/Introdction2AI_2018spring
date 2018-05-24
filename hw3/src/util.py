@@ -10,11 +10,11 @@ from pprint import pprint
 from typing import List, Dict, Union
 
 
-# 重新train資料的次數，多次一點比較可以代表參數的效果如何
-DUPLICATE_TRAINING_TIMES = 10
+# 重新 train資料的次數，多次一點比較可以代表參數的效果如何
+DUPLICATE_TRAINING_TIMES = 20
 
 # 越多次驗證測資的測定結果越可靠
-VALIDATE_TIMES =400
+VALIDATE_TIMES = 400
 
 
 VALIDATE_DATA_SIZE = 80
@@ -373,7 +373,7 @@ def validate(data, trained_tree):
     avg_rate = round(sum(vd_outcome)/len(vd_outcome),2)
     return avg_rate
 
-def main(in_fname, grid=None, ):
+def main(in_fname, grid=None ):
     data_list = []
     with open(in_fname, 'r') as input_file:
         i = 0
@@ -384,53 +384,83 @@ def main(in_fname, grid=None, ):
                 data_list.append(learn_data)
                 i += 1
     random.shuffle(data_list)
-
-    #origin_impurity =calc_data_list_impurity(data_list)
-    #print(f'origin_impurity {origin_impurity}')
     
+    #讀取不同資料集
+    data_dict = {}
+    for d in data_list:
+        if data_dict.get(d.label) == None:
+            data_dict[d.label] = []
+            data_dict[d.label].append(d)
+        else:
+            data_dict[d.label].append(d)
+
     global para_results
     global NUM_ATTR_BAGGING_TIMES,FOREST_SIZE
     global VALIDATE_DATA_SIZE,TRAINING_DATA_SIZE
 
 
     # try a range
-    bagsize = range(1,5,2)
-    fsize = range(1,201,10)
-    vd_size = range(20,21,5)
-    td_size = range(5,135,10)
-    g1 = dot_product(bagsize,fsize) 
-    g2 = dot_product(g1,vd_size)
-    g3 = dot_product(g2,td_size)
-
-    grid = g3
-    #grid = dot_product(bagsize,fsize)
+    #bagsize = range(3,14,4)
+    #fsize = range(125,201,25)
+    #vd_size = range(100,101,5)
+    #td_size = range(40,41,10)
+    #g1 = dot_product(bagsize,fsize) 
+    #g2 = dot_product(g1,vd_size)
+    #g3 = dot_product(g2,td_size)
+    #grid = g3
+    
     
     # try for single config
     #grid = [[11,125]]
 
     # single config imported for outside
-    #grid = [[NUM_ATTR_BAGGING_TIMES,FOREST_SIZE,VALIDATE_DATA_SIZE,TRAINING_DATA_SIZE]]
+    grid = [[NUM_ATTR_BAGGING_TIMES,FOREST_SIZE,VALIDATE_DATA_SIZE,TRAINING_DATA_SIZE]]
 
     for NUM_ATTR_BAGGING_TIMES,FOREST_SIZE,VALIDATE_DATA_SIZE,TRAINING_DATA_SIZE in grid:
         data_size = VALIDATE_DATA_SIZE
         num_trees = FOREST_SIZE
         
-        validation_data = data_list[0:data_size]
-        training_data_pool = data_list[data_size:]
+        validation_data = []
+        training_data_pool = []
+
+        # 確保驗證資料至少有包含到每一種label
+        for lst in data_dict.values():
+            random.shuffle(lst)
+        for vlist in data_dict.values():
+            propotion = len(vlist)/len(data_list)
+            vsize = int(propotion*VALIDATE_DATA_SIZE)
+            validation_data.extend( vlist[0:vsize])
+            training_data_pool.extend( vlist[vsize:])
+        
+        # 補足驗證資料的資料數
+        if len(validation_data) < VALIDATE_DATA_SIZE:
+            random.shuffle(training_data_pool)
+            diff = VALIDATE_DATA_SIZE - len(validation_data)
+            validation_data.extend( training_data_pool[0:diff])
+            training_data_pool = training_data_pool[diff:]
+        random.shuffle(training_data_pool)
+
             
         validate_outcomes = []
+
+        #td開頭: 使用訓練資料來進行驗證，其相關的變數
+        training_data_v_outcomes =[]
         for _ in range(DUPLICATE_TRAINING_TIMES):          
             training_data = [ random.sample(training_data_pool,TRAINING_DATA_SIZE) for _ in range(num_trees)]
             primary_tree = train_by_data(training_data)
             accuracy = validate( validation_data,primary_tree)
+            td_accuracy = validate(training_data_pool, primary_tree)# 使用訓練資料來驗證
             #print(f'rate:{accuracy}%')
             validate_outcomes.append(accuracy)
+            training_data_v_outcomes.append(td_accuracy)
 
         bag_size = NUM_ATTR_BAGGING_TIMES
         avg_rate = round(sum(validate_outcomes)/len(validate_outcomes),2)
+        td_avg_rate = round(sum(training_data_v_outcomes)/len(training_data_v_outcomes),2)
 
         cur_result = {
             'avg_rate':avg_rate,
+            'avg_td_rate':td_avg_rate,
             'forest_size': num_trees,
             'bag_size':bag_size,
             'validate_pool_size':data_size,
@@ -459,18 +489,18 @@ if __name__ =="__main__":
 
     # best_parameter
     if sample_input == s3:
-        VALIDATE_DATA_SIZE = 80
+        VALIDATE_DATA_SIZE = 100
         TRAINING_DATA_SIZE = 40
-        NUM_ATTR_BAGGING_TIMES = 10
+        NUM_ATTR_BAGGING_TIMES = 3
         FOREST_SIZE = 150
     elif sample_input == s2:
         VALIDATE_DATA_SIZE = 30
-        TRAINING_DATA_SIZE = 10
+        TRAINING_DATA_SIZE = 100
         NUM_ATTR_BAGGING_TIMES = 10
-        FOREST_SIZE = 150
+        FOREST_SIZE = 30
         
     elif sample_input == s1:
-        VALIDATE_DATA_SIZE = 20
+        VALIDATE_DATA_SIZE = 40
         TRAINING_DATA_SIZE = 5
         NUM_ATTR_BAGGING_TIMES = 5
         FOREST_SIZE = 40
