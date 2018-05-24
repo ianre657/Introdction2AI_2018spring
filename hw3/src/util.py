@@ -1,17 +1,57 @@
 import re
 import math
 import random
+import json
+import itertools
+import atexit
 import multiprocessing as mp
 import time
 from pprint import pprint
 from typing import List, Dict, Union
 
 
-DUPLICATE_VARIFIED_TIMES =10
-NUM_DATA_CHUNK=  101
+# 重新train資料的次數，多次一點比較可以代表參數的效果如何
+DUPLICATE_TRAINING_TIMES = 10
 
-NUM_DATA_CHUNK_FOR_TRAINING= 100
-NUM_ATTR_BAGGING_TIMES= 10
+# 越多次驗證測資的測定結果越可靠
+VALIDATE_TIMES =400
+
+
+VALIDATE_DATA_SIZE = 80
+TRAINING_DATA_SIZE = 40
+
+
+# 主要要調的參數
+NUM_ATTR_BAGGING_TIMES = 10
+FOREST_SIZE = 150
+
+
+#DUPLICATE_TRAINING_TIMES =5
+#NUM_ATTR_BAGGING_TIMES = 3
+#FOREST_SIZE = 25
+
+start_t= time.time()
+para_results = []
+
+def log_data(filename =None):
+    if filename is None:
+        filename = 'result.json'
+    with open(filename,'w') as fp:
+        para_results.sort( key=lambda x:x['avg_rate'],reverse=True)
+        #json.dump(para_results,fp,indent=4)
+        print('[',file=fp)
+        for d in para_results:
+            json.dump(d,fp)
+            if d != para_results[-1]:
+                print(',',file=fp)
+            else:
+                print('',file=fp)
+        print(']',file=fp)
+
+    end_t=time.time()
+    print('----------current result---------------')
+    pprint(para_results)
+    print(f'running time: {end_t -start_t}')
 
 class LearningData:
     '''儲存單一筆學習用的資料
@@ -28,6 +68,22 @@ class LearningData:
 
 def chunkify(lst:List,n) -> List[List]:
     return [ lst[i::n] for i in range(n) ]
+
+def dot_product(lst1, lst2):
+    '''回傳兩個list的cartesian product
+    '''
+    result =[] 
+    for i in lst1:
+        for j in lst2:
+            tmp = []
+            if type(i) != list:
+                i = [i]
+            if type(j) != list:
+                j = [j]
+            tmp.extend(i)
+            tmp.extend(j)
+            result.append(tmp)
+    return result
 
 def calc_data_list_impurity( data_list: List[LearningData]) -> float:
     def gini_impurity(dist_array: List[int]) -> float:
@@ -230,6 +286,7 @@ class decision_trees:
 
 def calculate_sub_dtree(data,ig_attrs,max_tree_depth):
     diff_attr_dnodes = [] # 忽略不同參數而產生出的決策樹List
+    #print(f'datasize:{len(data)}')
     for idx,ig_list in enumerate(ig_attrs):
         #print(f' bagging :{idx}/{len(ig_attrs)}')
         ignore_attr_idx = ig_list
@@ -263,14 +320,16 @@ def train_by_data(data_chunks: List[List[LearningData]],max_tree_depth=20 ) -> d
     
     
     # mp
+    done= 0
     def collect_mp_result( sub_dtree):
+        nonlocal done
         diff_data_dtrees.append(sub_dtree)
+        done += 1
+        #print(f'finished :{done} trees')
 
     def get_mp_failed(msg):
         print(f'failed :{msg}')
     
-
-
     pool = mp.Pool(processes=mp.cpu_count())
     for idx,data in enumerate(traning_data):
         pool.apply_async(
@@ -286,10 +345,37 @@ def train_by_data(data_chunks: List[List[LearningData]],max_tree_depth=20 ) -> d
 
     return Primary_dtree
 
-def main(fname):
-    
+def validate_single_time(examine_dataset,trained_tree):
+    good,bad = 0,0
+    for vdata in examine_dataset:
+        result = trained_tree.classify(vdata)
+        if result == vdata.label:
+            good +=1
+        else:
+            bad +=1
+    vrate = good/(good+bad)*100
+    vrate = round(vrate,2)
+    return vrate
+
+def validate(data, trained_tree):
+    random.seed()
+    vd_outcome = []
+
+    args_list = []
+    for _ in range(VALIDATE_TIMES):
+        vds = random.sample(data,VALIDATE_DATA_SIZE//2)
+        args_list.append((vds,trained_tree))
+
+    with mp.Pool(processes=mp.cpu_count() ) as pool:
+        vd_outcome = pool.starmap(validate_single_time,args_list)
+
+    #print(f'vd:{vd_outcome}')
+    avg_rate = round(sum(vd_outcome)/len(vd_outcome),2)
+    return avg_rate
+
+def main(in_fname, grid=None, ):
     data_list = []
-    with open(fname, 'r') as input_file:
+    with open(in_fname, 'r') as input_file:
         i = 0
         for line in input_file.readlines():
             line = line.strip()
@@ -297,56 +383,96 @@ def main(fname):
                 learn_data = LearningData([i for i in re.split('\s|,', line) if i !=''],idx=i)
                 data_list.append(learn_data)
                 i += 1
+    random.shuffle(data_list)
 
-        random.shuffle(data_list)
+    #origin_impurity =calc_data_list_impurity(data_list)
+    #print(f'origin_impurity {origin_impurity}')
+    
+    global para_results
+    global NUM_ATTR_BAGGING_TIMES,FOREST_SIZE
+    global VALIDATE_DATA_SIZE,TRAINING_DATA_SIZE
 
-        origin_impurity =calc_data_list_impurity(data_list)
-        print(f'origin_impurity {origin_impurity}')
 
+    # try a range
+    bagsize = range(1,5,2)
+    fsize = range(1,201,10)
+    vd_size = range(20,21,5)
+    td_size = range(5,135,10)
+    g1 = dot_product(bagsize,fsize) 
+    g2 = dot_product(g1,vd_size)
+    g3 = dot_product(g2,td_size)
 
-        num_chunk = NUM_DATA_CHUNK
-        num_training_chunk = NUM_DATA_CHUNK_FOR_TRAINING
+    grid = g3
+    #grid = dot_product(bagsize,fsize)
+    
+    # try for single config
+    #grid = [[11,125]]
 
-        data_chunks = chunkify(data_list, num_chunk)
-        validation_data = data_chunks[0]
+    # single config imported for outside
+    #grid = [[NUM_ATTR_BAGGING_TIMES,FOREST_SIZE,VALIDATE_DATA_SIZE,TRAINING_DATA_SIZE]]
+
+    for NUM_ATTR_BAGGING_TIMES,FOREST_SIZE,VALIDATE_DATA_SIZE,TRAINING_DATA_SIZE in grid:
+        data_size = VALIDATE_DATA_SIZE
+        num_trees = FOREST_SIZE
         
-        #training_data = data_chunks[1:num_training_chunk+1]
-
-
+        validation_data = data_list[0:data_size]
+        training_data_pool = data_list[data_size:]
+            
         validate_outcomes = []
-        for _ in range(DUPLICATE_VARIFIED_TIMES):
-            dchunk = data_chunks[1:]
-            random.Random(time.time()).shuffle(dchunk)
-            training_data = dchunk[:num_training_chunk]
-
+        for _ in range(DUPLICATE_TRAINING_TIMES):          
+            training_data = [ random.sample(training_data_pool,TRAINING_DATA_SIZE) for _ in range(num_trees)]
             primary_tree = train_by_data(training_data)
-            good = 0
-            bad = 0 
-            for vdata in validation_data:
-                result = primary_tree.classify(vdata)
-                if result == vdata.label:
-                    good +=1
-                else:
-                    bad +=1
-            vrate = good/(good+bad)*100
-            vrate = round(vrate,2)
-            print(f'validation :{vrate}%')
-            validate_outcomes.append(vrate)
-        t = NUM_DATA_CHUNK_FOR_TRAINING
-        b = NUM_ATTR_BAGGING_TIMES
-        print( f't:{t}, b:{b}')
-        print( f'vrates:{validate_outcomes}')
-        oc = validate_outcomes
-        oc = round(sum(oc)/len(oc),2)
-        print( f'avg vrate:{ oc }' )
+            accuracy = validate( validation_data,primary_tree)
+            #print(f'rate:{accuracy}%')
+            validate_outcomes.append(accuracy)
 
-        #print(f" Primary  tree result: {result}")
+        bag_size = NUM_ATTR_BAGGING_TIMES
+        avg_rate = round(sum(validate_outcomes)/len(validate_outcomes),2)
 
+        cur_result = {
+            'avg_rate':avg_rate,
+            'forest_size': num_trees,
+            'bag_size':bag_size,
+            'validate_pool_size':data_size,
+            'model_training_size':TRAINING_DATA_SIZE,
+        }
+        
+        para_results.append(cur_result)
+        print('----------- current result ------------------')
+        para_results.sort( key=lambda x:x['avg_rate'])
+        pprint(para_results)
+        #print(para)
+    
+
+    para_results.sort( key=lambda x:x['avg_rate'])
+    print('----------- finished ------------------')
+    pprint(para_results)
 
 if __name__ =="__main__":
-    s1='../sampledata/cross200.txt'
+    atexit.register(log_data)
+    s1 ='../sampledata/cross200.txt'
     s2 = '../sampledata/iris.txt'
     s3 = '../sampledata/optical-digits.txt'
-    main(s3)
-    #im = gini_impurity([30,10])
-    #print(f'impurity:{im}')
+
+    sample_input = s2
+
+
+    # best_parameter
+    if sample_input == s3:
+        VALIDATE_DATA_SIZE = 80
+        TRAINING_DATA_SIZE = 40
+        NUM_ATTR_BAGGING_TIMES = 10
+        FOREST_SIZE = 150
+    elif sample_input == s2:
+        VALIDATE_DATA_SIZE = 30
+        TRAINING_DATA_SIZE = 10
+        NUM_ATTR_BAGGING_TIMES = 10
+        FOREST_SIZE = 150
+        
+    elif sample_input == s1:
+        VALIDATE_DATA_SIZE = 20
+        TRAINING_DATA_SIZE = 5
+        NUM_ATTR_BAGGING_TIMES = 5
+        FOREST_SIZE = 40
+
+    main(sample_input)
